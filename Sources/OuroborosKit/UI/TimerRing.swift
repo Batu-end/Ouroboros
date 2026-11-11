@@ -74,8 +74,15 @@ struct RingArc: View {
     var body: some View {
         Circle()
             .trim(from: 0, to: max(0.0001, progress))
+            // The gradient starts and ends on the same colour. An angular gradient that
+            // ramps from faded to solid leaves a seam where it wraps, and paints the arc's
+            // leading round cap in the faded shade — which read as a pale blob stuck to the
+            // top of the ring. The dip now sits mid-arc, away from both caps.
             .stroke(
-                AngularGradient(colors: [accent.opacity(0.55), accent], center: .center),
+                AngularGradient(
+                    gradient: Gradient(colors: [accent, accent.opacity(0.68), accent]),
+                    center: .center
+                ),
                 style: StrokeStyle(lineWidth: 8, lineCap: .round)
             )
             .rotationEffect(.degrees(-90))
