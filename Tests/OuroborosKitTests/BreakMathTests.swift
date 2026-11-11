@@ -355,6 +355,28 @@ final class TimerEngineTests: XCTestCase {
         XCTAssertNil(state.loadPhase(), "an idle app restores to idle")
     }
 
+    /// The break-over panel must not restart the clock: work resumed the moment the break
+    /// ended, so a second start would throw away everything since.
+    func testEnsureWorkingDoesNotResetARunningClock() async throws {
+        let e = engine()
+        e.startWork()
+        try await Task.sleep(for: .milliseconds(1200))
+        let before = e.workElapsed
+
+        e.ensureWorking()
+
+        XCTAssertTrue(e.phase.isWorking)
+        XCTAssertGreaterThanOrEqual(e.workElapsed, before, "the clock must keep running")
+        XCTAssertTrue(e.sessions.isEmpty, "and nothing is logged or discarded")
+    }
+
+    func testEnsureWorkingStartsFromIdle() {
+        let e = engine()
+        XCTAssertTrue(e.phase.isIdle)
+        e.ensureWorking()
+        XCTAssertTrue(e.phase.isWorking, "if the session was ended meanwhile, start one")
+    }
+
     func testTransitionsIgnoreWrongPhase() {
         let e = engine()
         e.takeBreak()           // nothing to bank from idle

@@ -25,9 +25,11 @@ closes on itself. No Dock icon, no windows, no streaks to lose.
   15:00 of break per hour worked). Focus is not the same every day.
 - Work is cool teal, break is warm amber — the whole popover shifts tint, so the mode registers
   before you read a word.
-- When the countdown hits zero you get a bright chime (distinct from the soft one that starts a
-  break), a time-sensitive banner, and a small panel under the menu bar with a **Back to Work**
-  button. It does not steal focus; it just removes the gap where a 2-minute drift becomes 30.
+- Starting a break is silent. When the countdown hits zero you get a soft chime, a time-sensitive
+  banner, and a small panel under the menu bar. It does not steal focus; it just removes the gap
+  where a 2-minute drift becomes 30.
+- Work restarts by itself the moment the break ends — the panel only acknowledges it, and never
+  resets a clock that is already running.
 - Every 10 minutes of work the ring pulses once. Small, cheap, and it lands.
 - Today's loops are logged with totals and the break ratio you actually realized.
 

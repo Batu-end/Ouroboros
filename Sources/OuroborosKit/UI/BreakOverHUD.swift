@@ -27,7 +27,7 @@ enum BreakOverHUD {
         )
 
         let hosting = NSHostingView(rootView: content)
-        hosting.frame = NSRect(x: 0, y: 0, width: 290, height: 96)
+        hosting.frame = NSRect(x: 0, y: 0, width: 290, height: 112)
 
         let window = NSPanel(contentRect: hosting.frame,
                              styleMask: [.borderless, .nonactivatingPanel],
@@ -89,12 +89,12 @@ private struct HUDContent: View {
                 .buttonStyle(.plain)
             }
 
-            Text("\(BreakMath.humane(rested)) of rest from \(BreakMath.humane(worked)) of work. Loop closed.")
+            Text("\(BreakMath.humane(rested)) of rest from \(BreakMath.humane(worked)) of work. The work clock is already running again.")
                 .font(.system(size: 11))
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
-            PrimaryActionButton(title: "Back to Work", systemImage: "play.fill", tint: Theme.work, action: onResume)
+            PrimaryActionButton(title: "Got It", systemImage: "checkmark", tint: Theme.work, action: onResume)
         }
         .padding(12)
         .frame(width: 290, alignment: .leading)

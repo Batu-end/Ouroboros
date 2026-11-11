@@ -11,7 +11,9 @@ public struct OuroborosApp: App {
         engine.onBreakCompleted = { [weak engine] completion in
             BreakOverHUD.show(workSeconds: completion.workSeconds,
                               breakSeconds: completion.breakSeconds) {
-                engine?.startWork()
+                // Work resumed the instant the break ended; the button acknowledges that,
+                // it does not start a second timer.
+                engine?.ensureWorking()
             }
         }
         _engine = StateObject(wrappedValue: engine)

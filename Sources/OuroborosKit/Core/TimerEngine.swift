@@ -168,6 +168,13 @@ public final class TimerEngine: ObservableObject {
 
     // MARK: - Transitions
 
+    /// Used by the break-over panel: work has already restarted by then, so this must not
+    /// reset the clock — it only covers the case where the user ended the session meanwhile.
+    public func ensureWorking() {
+        guard phase.isIdle else { return }
+        startWork()
+    }
+
     public func startWork() {
         flashUntil = nil
         breakCompletion = nil
@@ -185,7 +192,6 @@ public final class TimerEngine: ObservableObject {
         let earned = BreakMath.earnedBreak(forWork: worked, ratio: generosity.ratio)
         phase = .onBreak(start: .now, duration: earned, workedSeconds: worked)
         milestone = 0
-        notifier.breakStarted()
         resetTickCache()
         persistPhase()
         startTicking()
