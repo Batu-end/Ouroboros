@@ -151,6 +151,61 @@ final class TimerEngineTests: XCTestCase {
         XCTAssertGreaterThan(bare.size.width, 8)
     }
 
+    /// The break ring is one full circle across the whole break, not a per-minute sweep.
+    func testBreakRingSpansTheWholeBreak() {
+        let defaults = UserDefaults(suiteName: "ouroboros.tests.\(UUID().uuidString)")!
+        let e = TimerEngine(store: SessionStore(defaults: defaults), timeScale: 1)
+        e.startWork()
+        e.takeBreak()
+
+        guard case .onBreak(let start, let duration, _) = e.phase else {
+            return XCTFail("expected a break phase")
+        }
+        XCTAssertEqual(e.ringProgress(at: start), 1.0, accuracy: 0.01, "full at the start")
+        XCTAssertEqual(e.ringProgress(at: start.addingTimeInterval(duration / 2)), 0.5, accuracy: 0.01)
+        XCTAssertEqual(e.ringProgress(at: start.addingTimeInterval(duration)), 0.0, accuracy: 0.01)
+        XCTAssertEqual(e.ringProgress(at: start.addingTimeInterval(duration * 2)), 0.0, accuracy: 0.01)
+    }
+
+    /// The work ring sweeps once a minute, and the samples between seconds are distinct —
+    /// which is what makes the motion continuous rather than stepped.
+    func testWorkRingSweepsOncePerMinuteAndIsContinuous() {
+        let defaults = UserDefaults(suiteName: "ouroboros.tests.\(UUID().uuidString)")!
+        let e = TimerEngine(store: SessionStore(defaults: defaults), timeScale: 1)
+        e.startWork()
+        guard case .working(let since) = e.phase else { return XCTFail("expected work") }
+
+        XCTAssertEqual(e.ringProgress(at: since.addingTimeInterval(30)), 0.5, accuracy: 0.01)
+        XCTAssertEqual(e.ringProgress(at: since.addingTimeInterval(59.99)), 1.0, accuracy: 0.01)
+        XCTAssertEqual(e.ringProgress(at: since.addingTimeInterval(60)), 0.0, accuracy: 0.01, "wraps")
+        XCTAssertEqual(e.ringProgress(at: since.addingTimeInterval(90)), 0.5, accuracy: 0.01)
+
+        let a = e.ringProgress(at: since.addingTimeInterval(10.1))
+        let b = e.ringProgress(at: since.addingTimeInterval(10.6))
+        XCTAssertNotEqual(a, b, "sub-second samples must differ")
+    }
+
+    /// The Today list: a closed loop lands in it and survives a relaunch.
+    func testClosedLoopAppearsInTodayAndPersists() async throws {
+        let suite = "ouroboros.tests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        let e = TimerEngine(store: SessionStore(defaults: defaults), timeScale: 600)
+
+        e.startWork()
+        try await Task.sleep(for: .milliseconds(400))
+        e.takeBreak()
+        try await Task.sleep(for: .milliseconds(100))
+        e.resumeWork()
+
+        XCTAssertEqual(e.sessions.today.count, 1)
+        XCTAssertGreaterThan(e.sessions.today.totalWork, 0)
+        XCTAssertGreaterThan(e.sessions.today.totalBreak, 0)
+
+        // A fresh engine over the same storage sees it, as it would after a relaunch.
+        let reopened = TimerEngine(store: SessionStore(defaults: defaults), timeScale: 1)
+        XCTAssertEqual(reopened.sessions.today.count, 1)
+    }
+
     func testTransitionsIgnoreWrongPhase() {
         let e = engine()
         e.takeBreak()           // nothing to bank from idle

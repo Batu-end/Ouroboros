@@ -14,7 +14,7 @@ public struct PopoverView: View {
 
             TimerRing(
                 phase: engine.phase,
-                progress: engine.ringProgress,
+                progress: engine.ringProgress(at:),
                 primary: primaryReadout,
                 caption: captionText
             )

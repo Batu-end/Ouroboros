@@ -84,18 +84,25 @@ public final class TimerEngine: ObservableObject {
         phase.isWorking ? BreakMath.earnedBreak(forWork: workElapsed) : 0
     }
 
-    /// `0...1` for the break ring (depleting) or the work ring (one sweep per minute).
-    public var ringProgress: Double {
+    /// `0...1` for the ring, sampled at an arbitrary instant.
+    ///
+    /// Break: one full circle spans the whole break, depleting to empty as it runs out.
+    /// Work: one sweep per minute, since work here is open-ended and a bar toward an
+    /// invented deadline would be a lie.
+    public func ringProgress(at reference: Date) -> Double {
         switch phase {
         case .idle:
             return 0
         case .working:
-            return (workElapsed.truncatingRemainder(dividingBy: 60)) / 60
-        case .onBreak:
-            guard breakDuration > 0 else { return 0 }
-            return breakRemaining / breakDuration
+            return workElapsed(at: reference).truncatingRemainder(dividingBy: 60) / 60
+        case .onBreak(_, let duration, _):
+            guard duration > 0 else { return 0 }
+            return max(0, (duration - breakElapsed(at: reference)) / duration)
         }
     }
+
+    /// The ring value as of the last published second.
+    public var ringProgress: Double { ringProgress(at: now) }
 
     public var isFlashing: Bool {
         guard let flashUntil else { return false }
