@@ -16,7 +16,8 @@ public struct PopoverView: View {
                 phase: engine.phase,
                 progress: engine.ringProgress(at:),
                 primary: primaryReadout,
-                caption: captionText
+                caption: captionText,
+                milestone: engine.milestone
             )
             .padding(.top, 2)
 
@@ -31,7 +32,13 @@ public struct PopoverView: View {
         }
         .padding(Theme.gutter)
         .frame(width: Theme.popoverWidth)
-        .background(.ultraThinMaterial)
+        .background {
+            ZStack {
+                Rectangle().fill(.ultraThinMaterial)
+                Theme.wash(for: engine.phase)
+            }
+            .ignoresSafeArea()
+        }
         .animation(Theme.phaseChange, value: engine.phase)
     }
 
@@ -39,7 +46,7 @@ public struct PopoverView: View {
 
     private var header: some View {
         HStack(spacing: 6) {
-            Image(systemName: "arrow.triangle.2.circlepath")
+            Image(systemName: "infinity")
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(Theme.accent(for: engine.phase))
             Text("OUROBOROS")
@@ -57,6 +64,8 @@ public struct PopoverView: View {
                 .background(Theme.accent(for: engine.phase).opacity(0.16), in: Capsule())
                 .foregroundStyle(Theme.accent(for: engine.phase))
 
+            settingsMenu
+
             Button {
                 NSApplication.shared.terminate(nil)
             } label: {
@@ -70,6 +79,27 @@ public struct PopoverView: View {
         }
     }
 
+    /// One gear, one choice. Named levels rather than a slider: picking "more recovery" on a
+    /// bad day should not involve arithmetic.
+    private var settingsMenu: some View {
+        Menu {
+            Picker("Break generosity", selection: $engine.generosity) {
+                ForEach(BreakGenerosity.allCases, id: \.self) { level in
+                    Text("\(level.title) — \(level.detail)").tag(level)
+                }
+            }
+            .pickerStyle(.inline)
+        } label: {
+            Image(systemName: "gearshape")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(.tertiary)
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .help("Break generosity: \(engine.generosity.title)")
+    }
+
     private var primaryButton: some View {
         Group {
             switch engine.phase {
@@ -77,12 +107,16 @@ public struct PopoverView: View {
                 PrimaryActionButton(title: "Start Working", systemImage: "play.fill", tint: Theme.work) {
                     engine.startWork()
                 }
+            case .waiting:
+                PrimaryActionButton(title: "Start Next Block", systemImage: "play.fill", tint: Theme.waiting) {
+                    engine.startWork()
+                }
             case .working:
                 PrimaryActionButton(title: "I'm Distracted — Take Break", systemImage: "cup.and.saucer.fill", tint: Theme.rest) {
                     engine.takeBreak()
                 }
             case .onBreak:
-                PrimaryActionButton(title: "Resume Work Early", systemImage: "briefcase.fill", tint: Theme.work) {
+                PrimaryActionButton(title: "Resume Work Early", systemImage: "infinity.circle.fill", tint: Theme.work) {
                     engine.resumeWork()
                 }
             }
@@ -109,6 +143,7 @@ public struct PopoverView: View {
         case .idle:    return "IDLE"
         case .working: return "WORKING"
         case .onBreak: return "ON BREAK"
+        case .waiting: return "WAITING"
         }
     }
 
@@ -117,6 +152,7 @@ public struct PopoverView: View {
         case .idle:    return "0:00"
         case .working: return BreakMath.clock(engine.workElapsed)
         case .onBreak: return BreakMath.clock(engine.breakRemaining)
+        case .waiting: return BreakMath.clock(engine.waitingElapsed)
         }
     }
 
@@ -124,6 +160,8 @@ public struct PopoverView: View {
         switch engine.phase {
         case .idle:
             return "ready when you are"
+        case .waiting:
+            return "nothing is counting"
         case .working:
             return "banked \(BreakMath.clock(engine.bankedBreak)) break"
         case .onBreak:

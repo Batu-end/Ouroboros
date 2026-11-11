@@ -3,14 +3,15 @@ import Foundation
 /// Pure, testable rules behind the dynamic break ratio.
 public enum BreakMath {
 
-    /// Fraction of worked time that is banked as break time.
-    public static let ratio: Double = 0.15
+    /// Default fraction of worked time that is banked as break time.
+    /// `BreakGenerosity` can raise or lower it per taste.
+    public static let ratio: Double = BreakGenerosity.standard.ratio
 
     /// A break is never shorter than this, no matter how brief the work block was.
     public static let minimumBreak: TimeInterval = 60
 
     /// Break time earned by a work block, rounded to whole seconds and floored at `minimumBreak`.
-    public static func earnedBreak(forWork work: TimeInterval) -> TimeInterval {
+    public static func earnedBreak(forWork work: TimeInterval, ratio: Double = ratio) -> TimeInterval {
         let earned = (max(0, work) * ratio).rounded()
         return max(minimumBreak, earned)
     }

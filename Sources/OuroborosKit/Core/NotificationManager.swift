@@ -28,17 +28,27 @@ public final class NotificationManager {
         }
     }
 
-    /// Fired when a break countdown reaches zero.
+    /// Fired when a break countdown reaches zero: a soft warm chime, plus a time-sensitive
+    /// banner so it still surfaces while Focus is on. Nothing plays when a break *starts* —
+    /// stopping work should feel like relief, not an event that announces itself.
     public func breakFinished(workSeconds: TimeInterval, breakSeconds: TimeInterval) {
-        NSSound(named: "Glass")?.play()
+        play("Purr")
         guard bannersAvailable, runningInsideAppBundle else { return }
 
         let content = UNMutableNotificationContent()
         content.title = "Break's over"
         content.body = "\(BreakMath.humane(breakSeconds)) of break from \(BreakMath.humane(workSeconds)) of work. Loop closed — pick the next thing."
-        content.sound = nil  // the NSSound above already played; avoid a double chime
+        content.sound = nil  // the chime above already played; avoid a double hit
+        content.interruptionLevel = .timeSensitive
 
         let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
         UNUserNotificationCenter.current().add(request)
+    }
+
+    /// Falls back through a couple of stock sounds, since a missing one returns nil rather
+    /// than throwing — silence would make the end of a break easy to miss.
+    private func play(_ name: String) {
+        let sound = NSSound(named: name) ?? NSSound(named: "Submarine") ?? NSSound(named: "Glass")
+        sound?.play()
     }
 }

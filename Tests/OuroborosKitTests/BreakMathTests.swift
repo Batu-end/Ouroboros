@@ -47,9 +47,13 @@ final class BreakMathTests: XCTestCase {
 @MainActor
 final class TimerEngineTests: XCTestCase {
 
-    private func engine() -> TimerEngine {
+    /// Every engine gets its own defaults suite: sharing `.standard` would let the real
+    /// app's live phase leak into the tests (and vice versa).
+    private func engine(timeScale: Double = 1) -> TimerEngine {
         let defaults = UserDefaults(suiteName: "ouroboros.tests.\(UUID().uuidString)")!
-        return TimerEngine(store: SessionStore(defaults: defaults), timeScale: 1)
+        return TimerEngine(store: SessionStore(defaults: defaults),
+                           state: StateStore(defaults: defaults),
+                           timeScale: timeScale)
     }
 
     func testStartsIdle() {
@@ -90,7 +94,8 @@ final class TimerEngineTests: XCTestCase {
     /// `timeScale: 600` makes a 60s break elapse in 0.1s of real time.
     func testBreakExpiryLogsTheLoopAndResumesWork() async throws {
         let defaults = UserDefaults(suiteName: "ouroboros.tests.\(UUID().uuidString)")!
-        let e = TimerEngine(store: SessionStore(defaults: defaults), timeScale: 600)
+        let e = TimerEngine(store: SessionStore(defaults: defaults),
+                            state: StateStore(defaults: defaults), timeScale: 600)
 
         e.startWork()
         try await Task.sleep(for: .milliseconds(600))   // ~360s of virtual work
@@ -103,12 +108,12 @@ final class TimerEngineTests: XCTestCase {
 
         try await Task.sleep(for: .milliseconds(900))   // long enough for the break to run out
 
-        XCTAssertTrue(e.phase.isWorking, "break should auto-return to work")
+        XCTAssertTrue(e.phase.isWaiting, "a finished break waits for a deliberate restart")
         XCTAssertEqual(e.sessions.count, 1)
         let logged = try XCTUnwrap(e.sessions.first)
         XCTAssertEqual(logged.breakSeconds, duration, accuracy: 0.001, "full break was taken")
         XCTAssertEqual(logged.workSeconds, worked, accuracy: 0.001)
-        XCTAssertNotNil(e.flashUntil, "menu bar fallback announcement was armed")
+        XCTAssertEqual(e.menuBarSymbol, "hourglass", "the menu bar must show it is waiting")
     }
 
     /// Regression: the tick used to measure elapsed time against its own published
@@ -117,7 +122,8 @@ final class TimerEngineTests: XCTestCase {
     /// always pushed the second over.
     func testClockActuallyAdvancesAtRealSpeed() async throws {
         let defaults = UserDefaults(suiteName: "ouroboros.tests.\(UUID().uuidString)")!
-        let e = TimerEngine(store: SessionStore(defaults: defaults), timeScale: 1)
+        let e = TimerEngine(store: SessionStore(defaults: defaults),
+                            state: StateStore(defaults: defaults), timeScale: 1)
 
         e.startWork()
         try await Task.sleep(for: .milliseconds(1300))
@@ -130,7 +136,8 @@ final class TimerEngineTests: XCTestCase {
     /// Every SF Symbol the status item asks for must exist on this OS.
     func testMenuBarSymbolsResolve() {
         let defaults = UserDefaults(suiteName: "ouroboros.tests.\(UUID().uuidString)")!
-        let e = TimerEngine(store: SessionStore(defaults: defaults), timeScale: 1)
+        let e = TimerEngine(store: SessionStore(defaults: defaults),
+                            state: StateStore(defaults: defaults), timeScale: 1)
 
         XCTAssertNotNil(NSImage(systemSymbolName: e.menuBarSymbol, accessibilityDescription: nil))
         e.startWork()
@@ -155,7 +162,8 @@ final class TimerEngineTests: XCTestCase {
     /// The break ring is one full circle across the whole break, not a per-minute sweep.
     func testBreakRingSpansTheWholeBreak() {
         let defaults = UserDefaults(suiteName: "ouroboros.tests.\(UUID().uuidString)")!
-        let e = TimerEngine(store: SessionStore(defaults: defaults), timeScale: 1)
+        let e = TimerEngine(store: SessionStore(defaults: defaults),
+                            state: StateStore(defaults: defaults), timeScale: 1)
         e.startWork()
         e.takeBreak()
 
@@ -172,7 +180,8 @@ final class TimerEngineTests: XCTestCase {
     /// which is what makes the motion continuous rather than stepped.
     func testWorkRingSweepsOncePerMinuteAndIsContinuous() {
         let defaults = UserDefaults(suiteName: "ouroboros.tests.\(UUID().uuidString)")!
-        let e = TimerEngine(store: SessionStore(defaults: defaults), timeScale: 1)
+        let e = TimerEngine(store: SessionStore(defaults: defaults),
+                            state: StateStore(defaults: defaults), timeScale: 1)
         e.startWork()
         guard case .working(let since) = e.phase else { return XCTFail("expected work") }
 
@@ -190,7 +199,8 @@ final class TimerEngineTests: XCTestCase {
     func testClosedLoopAppearsInTodayAndPersists() async throws {
         let suite = "ouroboros.tests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suite)!
-        let e = TimerEngine(store: SessionStore(defaults: defaults), timeScale: 600)
+        let e = TimerEngine(store: SessionStore(defaults: defaults),
+                            state: StateStore(defaults: defaults), timeScale: 600)
 
         e.startWork()
         try await Task.sleep(for: .milliseconds(400))
@@ -203,8 +213,199 @@ final class TimerEngineTests: XCTestCase {
         XCTAssertGreaterThan(e.sessions.today.totalBreak, 0)
 
         // A fresh engine over the same storage sees it, as it would after a relaunch.
-        let reopened = TimerEngine(store: SessionStore(defaults: defaults), timeScale: 1)
+        let reopened = TimerEngine(store: SessionStore(defaults: defaults),
+                                   state: StateStore(defaults: defaults), timeScale: 1)
         XCTAssertEqual(reopened.sessions.today.count, 1)
+    }
+
+    // MARK: Adjustable generosity
+
+    func testGenerosityChangesWhatAnHourEarns() {
+        XCTAssertEqual(BreakMath.earnedBreak(forWork: 3600, ratio: BreakGenerosity.low.ratio), 432)       // 7:12
+        XCTAssertEqual(BreakMath.earnedBreak(forWork: 3600, ratio: BreakGenerosity.standard.ratio), 540)  // 9:00
+        XCTAssertEqual(BreakMath.earnedBreak(forWork: 3600, ratio: BreakGenerosity.high.ratio), 900)      // 15:00
+    }
+
+    func testGenerosityIsPersistedImmediately() {
+        let suite = "ouroboros.tests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        let state = StateStore(defaults: defaults)
+
+        let e = TimerEngine(store: SessionStore(defaults: defaults), state: state, timeScale: 1)
+        XCTAssertEqual(e.generosity, .standard, "a fresh install starts standard")
+        e.generosity = .high
+
+        XCTAssertEqual(StateStore(defaults: defaults).generosity, .high)
+        XCTAssertEqual(TimerEngine(store: SessionStore(defaults: defaults), state: state, timeScale: 1).generosity, .high)
+    }
+
+    func testBankedBreakFollowsTheChosenLevel() async throws {
+        let defaults = UserDefaults(suiteName: "ouroboros.tests.\(UUID().uuidString)")!
+        let e = TimerEngine(store: SessionStore(defaults: defaults),
+                            state: StateStore(defaults: defaults), timeScale: 600)
+        e.generosity = .high
+        e.startWork()
+        try await Task.sleep(for: .milliseconds(400))
+        e.takeBreak()
+
+        guard case .onBreak(_, let duration, let worked) = e.phase else {
+            return XCTFail("expected a break phase")
+        }
+        XCTAssertEqual(duration, BreakMath.earnedBreak(forWork: worked, ratio: 0.25), accuracy: 0.001)
+    }
+
+    // MARK: Milestones
+
+    func testWorkMilestoneTicksEveryTenMinutes() async throws {
+        let defaults = UserDefaults(suiteName: "ouroboros.tests.\(UUID().uuidString)")!
+        // 600x: one real second is ten virtual minutes, i.e. exactly one milestone.
+        let e = TimerEngine(store: SessionStore(defaults: defaults),
+                            state: StateStore(defaults: defaults), timeScale: 600)
+        e.startWork()
+        XCTAssertEqual(e.milestone, 0)
+
+        try await Task.sleep(for: .milliseconds(1200))
+        XCTAssertGreaterThanOrEqual(e.milestone, 1)
+    }
+
+    // MARK: CPU
+
+    func testTickerOnlyRunsWhileAPhaseIsLive() {
+        let defaults = UserDefaults(suiteName: "ouroboros.tests.\(UUID().uuidString)")!
+        let e = TimerEngine(store: SessionStore(defaults: defaults),
+                            state: StateStore(defaults: defaults), timeScale: 1)
+
+        XCTAssertFalse(e.isTicking, "idle must cost nothing")
+        e.startWork()
+        XCTAssertTrue(e.isTicking)
+        e.takeBreak()
+        XCTAssertTrue(e.isTicking)
+        e.endSession()
+        XCTAssertFalse(e.isTicking)
+    }
+
+    // MARK: Crash / reboot restore
+
+    func testRestoreResumesWorkAfterAQuickCrash() {
+        let defaults = UserDefaults(suiteName: "ouroboros.tests.\(UUID().uuidString)")!
+        let state = StateStore(defaults: defaults)
+        let since = Date().addingTimeInterval(-900)   // 15 minutes in
+        state.savePhase(PhaseSnapshot(phase: .working(since: since), heartbeat: Date().addingTimeInterval(-5)))
+
+        let e = TimerEngine(store: SessionStore(defaults: defaults), state: state, timeScale: 1)
+
+        XCTAssertTrue(e.phase.isWorking, "a fresh heartbeat means the app just died; pick it up")
+        XCTAssertGreaterThan(e.workElapsed, 800)
+        XCTAssertTrue(e.isTicking)
+        XCTAssertTrue(e.sessions.isEmpty, "nothing is closed yet")
+    }
+
+    func testRestoreAfterARebootClosesTheBlockAtTheLastHeartbeat() {
+        let defaults = UserDefaults(suiteName: "ouroboros.tests.\(UUID().uuidString)")!
+        let state = StateStore(defaults: defaults)
+        let since = Date().addingTimeInterval(-7200)          // started two hours ago
+        let heartbeat = Date().addingTimeInterval(-5400)      // app died 90 minutes ago
+        state.savePhase(PhaseSnapshot(phase: .working(since: since), heartbeat: heartbeat))
+
+        let e = TimerEngine(store: SessionStore(defaults: defaults), state: state, timeScale: 1)
+
+        XCTAssertTrue(e.phase.isIdle)
+        XCTAssertFalse(e.isTicking)
+        XCTAssertEqual(e.sessions.count, 1, "the work up to the last heartbeat is kept")
+        XCTAssertEqual(e.sessions[0].workSeconds, 1800, accuracy: 5, "the dead 90 minutes are not work")
+    }
+
+    func testRestoreLogsABreakThatFinishedWhileAway() {
+        let defaults = UserDefaults(suiteName: "ouroboros.tests.\(UUID().uuidString)")!
+        let state = StateStore(defaults: defaults)
+        let start = Date().addingTimeInterval(-1800)
+        state.savePhase(PhaseSnapshot(phase: .onBreak(start: start, duration: 540, workedSeconds: 3600),
+                                      heartbeat: Date().addingTimeInterval(-1500)))
+
+        let e = TimerEngine(store: SessionStore(defaults: defaults), state: state, timeScale: 1)
+
+        XCTAssertTrue(e.phase.isIdle, "never pretend work resumed while the app was dead")
+        XCTAssertEqual(e.sessions.count, 1)
+        XCTAssertEqual(e.sessions[0].workSeconds, 3600, accuracy: 0.001)
+        XCTAssertEqual(e.sessions[0].breakSeconds, 540, accuracy: 0.001, "capped at the break length")
+    }
+
+    func testRestoreResumesABreakStillInProgress() {
+        let defaults = UserDefaults(suiteName: "ouroboros.tests.\(UUID().uuidString)")!
+        let state = StateStore(defaults: defaults)
+        let start = Date().addingTimeInterval(-60)
+        state.savePhase(PhaseSnapshot(phase: .onBreak(start: start, duration: 540, workedSeconds: 3600),
+                                      heartbeat: Date().addingTimeInterval(-3)))
+
+        let e = TimerEngine(store: SessionStore(defaults: defaults), state: state, timeScale: 1)
+
+        XCTAssertTrue(e.phase.isOnBreak)
+        XCTAssertEqual(e.breakRemaining, 480, accuracy: 5)
+        XCTAssertTrue(e.isTicking)
+    }
+
+    func testIdleStateIsClearedFromStorage() {
+        let defaults = UserDefaults(suiteName: "ouroboros.tests.\(UUID().uuidString)")!
+        let state = StateStore(defaults: defaults)
+        let e = TimerEngine(store: SessionStore(defaults: defaults), state: state, timeScale: 1)
+
+        e.startWork()
+        XCTAssertNotNil(state.loadPhase())
+        e.endSession()
+        XCTAssertNil(state.loadPhase(), "an idle app restores to idle")
+    }
+
+    /// Waiting time is counted as neither work nor break: it is simply not at the desk.
+    func testWaitingTimeIsNeverCountedAsWork() async throws {
+        let e = engine(timeScale: 600)
+        e.startWork()
+        try await Task.sleep(for: .milliseconds(400))
+        e.takeBreak()
+        try await Task.sleep(for: .milliseconds(400))   // long enough for the break to end
+
+        XCTAssertTrue(e.phase.isWaiting)
+        let loggedBefore = e.sessions.totalWork
+        XCTAssertEqual(e.workElapsed, 0, "nothing accrues while waiting")
+
+        try await Task.sleep(for: .milliseconds(300))
+        XCTAssertGreaterThan(e.waitingElapsed, 0, "but the wait itself is shown")
+        XCTAssertEqual(e.sessions.totalWork, loggedBefore, accuracy: 0.001, "and never logged")
+
+        e.startWork()
+        XCTAssertTrue(e.phase.isWorking)
+        XCTAssertLessThan(e.workElapsed, 60, "the new block starts from zero")
+    }
+
+    func testEndSessionFromWaitingGoesIdleWithoutLogging() async throws {
+        let e = engine(timeScale: 600)
+        e.startWork()
+        try await Task.sleep(for: .milliseconds(400))
+        e.takeBreak()
+        try await Task.sleep(for: .milliseconds(400))
+        XCTAssertTrue(e.phase.isWaiting)
+
+        let logged = e.sessions.count
+        e.endSession()
+
+        XCTAssertTrue(e.phase.isIdle)
+        XCTAssertFalse(e.isTicking)
+        XCTAssertEqual(e.sessions.count, logged, "the loop was already logged when it closed")
+    }
+
+    func testWaitingIsRestoredAfterAQuickCrashAndDroppedAfterAReboot() {
+        let defaults = UserDefaults(suiteName: "ouroboros.tests.\(UUID().uuidString)")!
+        let state = StateStore(defaults: defaults)
+        state.savePhase(PhaseSnapshot(phase: .waiting(since: Date().addingTimeInterval(-30)),
+                                      heartbeat: Date().addingTimeInterval(-4)))
+        let fresh = TimerEngine(store: SessionStore(defaults: defaults), state: state, timeScale: 1)
+        XCTAssertTrue(fresh.phase.isWaiting)
+
+        let stale = UserDefaults(suiteName: "ouroboros.tests.\(UUID().uuidString)")!
+        let staleState = StateStore(defaults: stale)
+        staleState.savePhase(PhaseSnapshot(phase: .waiting(since: Date().addingTimeInterval(-7200)),
+                                           heartbeat: Date().addingTimeInterval(-7000)))
+        let rebooted = TimerEngine(store: SessionStore(defaults: stale), state: staleState, timeScale: 1)
+        XCTAssertTrue(rebooted.phase.isIdle, "a wait from before a reboot is meaningless")
     }
 
     func testTransitionsIgnoreWrongPhase() {

@@ -7,10 +7,17 @@ public enum AppPhase: Equatable, Sendable {
     case idle
     case working(since: Date)
     case onBreak(start: Date, duration: TimeInterval, workedSeconds: TimeInterval)
+    /// The break has finished and the next work block is waiting on a deliberate click.
+    /// Time spent here is counted as neither work nor break — it is simply not at the desk.
+    case waiting(since: Date)
 
     public var isWorking: Bool { if case .working = self { return true }; return false }
     public var isOnBreak: Bool { if case .onBreak = self { return true }; return false }
+    public var isWaiting: Bool { if case .waiting = self { return true }; return false }
     public var isIdle: Bool { self == .idle }
+
+    /// True when no clock is accumulating, i.e. the app owes the user nothing.
+    public var isDormant: Bool { isIdle || isWaiting }
 }
 
 /// One completed work block and the break that followed it.
