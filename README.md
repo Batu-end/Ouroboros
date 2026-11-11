@@ -19,10 +19,16 @@ closes on itself. No Dock icon, no windows, no streaks to lose.
 | Working | `💼 14:25` (counting up) | **I'm Distracted — Take Break** |
 | On break | `☕ 02:45` (counting down) | Resume Work Early |
 
-- `EarnedBreak = WorkedSeconds × 0.15`, with a hard floor of **60 seconds** — a two-minute work
+- `EarnedBreak = WorkedSeconds × ratio`, with a hard floor of **60 seconds** — a two-minute work
   block still buys a real minute off, so there is never a reason to push through.
-- When the countdown hits zero you get a soft chime and a banner, and the app drops you straight
-  back into Working. The loop never leaves you stranded at a dead stop.
+- The ratio is yours, under the gear: **Low 12%**, **Standard 15%**, **High 25%** (7:12, 9:00 and
+  15:00 of break per hour worked). Focus is not the same every day.
+- Work is cool teal, break is warm amber — the whole popover shifts tint, so the mode registers
+  before you read a word.
+- When the countdown hits zero you get a bright chime (distinct from the soft one that starts a
+  break), a time-sensitive banner, and a small panel under the menu bar with a **Back to Work**
+  button. It does not steal focus; it just removes the gap where a 2-minute drift becomes 30.
+- Every 10 minutes of work the ring pulses once. Small, cheap, and it lands.
 - Today's loops are logged with totals and the break ratio you actually realized.
 
 ## Build and run
@@ -106,7 +112,7 @@ Sources/OuroborosKit/
 Sources/Ouroboros/main.swift    entry point
 ```
 
-Two deliberate choices:
+Four deliberate choices:
 
 - **Absolute time anchors, never counters.** Each phase stores a `Date`; elapsed and remaining are
   recomputed from the clock on every tick. Sleep the lid, drop a timer tick, change nothing — the
@@ -114,6 +120,14 @@ Two deliberate choices:
 - **The working ring sweeps once a minute** rather than filling toward a target. Work here is
   open-ended; a progress bar toward an invented deadline would be a lie. The caption shows what
   matters instead: how much break you have banked so far.
+- **A crash never costs you an hour.** The live phase is written to `UserDefaults` on every
+  transition, with a heartbeat every 15 seconds. Relaunch within 90 seconds and the timer picks up
+  exactly where it was; come back after a reboot and the block is closed *at the last heartbeat* —
+  the dead time is never counted as work, and never silently discarded either.
+- **Idle is 0.0% CPU.** The ticker only exists while a phase is live, the status item is cached
+  between seconds, and the ring's `TimelineView` is paused whenever its window is off screen —
+  `MenuBarExtra` keeps its content alive after the popover closes, so an ungated animation quietly
+  burns half a core. Measured: **0.0% idle, ~1.3% with a timer running and the popover closed**.
 
 Pure SwiftUI + Combine + UserNotifications. No dependencies. macOS 14+.
 

@@ -7,7 +7,20 @@ import AppKit
 /// reliable route: AppKit then tints it for light/dark menu bars and for the highlighted state.
 enum StatusItemImage {
 
+    /// The status item is rebuilt once a second, and `NSImage`'s drawing handler can be
+    /// replayed on every display pass, so the last rendering is kept and reused. One entry
+    /// is all that is needed: the readout only ever moves forward.
+    private nonisolated(unsafe) static var cache: (key: String, image: NSImage)?
+
     static func make(symbol: String, text: String) -> NSImage {
+        let key = symbol + "\u{1F}" + text
+        if let cache, cache.key == key { return cache.image }
+        let image = render(symbol: symbol, text: text)
+        cache = (key, image)
+        return image
+    }
+
+    private static func render(symbol: String, text: String) -> NSImage {
         let symbolConfig = NSImage.SymbolConfiguration(pointSize: 15, weight: .medium)
         let glyph = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)?
             .withSymbolConfiguration(symbolConfig)

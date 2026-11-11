@@ -4,9 +4,18 @@ import SwiftUI
 /// item and its popover are the entire interface.
 public struct OuroborosApp: App {
 
-    @StateObject private var engine = TimerEngine()
+    @StateObject private var engine: TimerEngine
 
-    public init() {}
+    public init() {
+        let engine = TimerEngine()
+        engine.onBreakCompleted = { [weak engine] completion in
+            BreakOverHUD.show(workSeconds: completion.workSeconds,
+                              breakSeconds: completion.breakSeconds) {
+                engine?.startWork()
+            }
+        }
+        _engine = StateObject(wrappedValue: engine)
+    }
 
     public var body: some Scene {
         MenuBarExtra {
