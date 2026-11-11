@@ -15,9 +15,10 @@ closes on itself. No Dock icon, no windows, no streaks to lose.
 
 | Phase | Menu bar | Primary button |
 | --- | --- | --- |
-| Idle | `⟳` | Start Working |
-| Working | `💼 14:25` (counting up) | **I'm Distracted — Take Break** |
-| On break | `☕ 02:45` (counting down) | Resume Work Early |
+| Idle | `infinity` | Start Working |
+| Working | `infinity.circle.fill` + `14:25` counting up | **I'm Distracted — Take Break** |
+| On break | `cup.and.saucer.fill` + `02:45` counting down | Resume Work Early |
+| Waiting | `hourglass` + how long it has waited | Start Next Block |
 
 - `EarnedBreak = WorkedSeconds × ratio`, with a hard floor of **60 seconds** — a two-minute work
   block still buys a real minute off, so there is never a reason to push through.
@@ -25,11 +26,12 @@ closes on itself. No Dock icon, no windows, no streaks to lose.
   15:00 of break per hour worked). Focus is not the same every day.
 - Work is cool teal, break is warm amber — the whole popover shifts tint, so the mode registers
   before you read a word.
-- Starting a break is silent. When the countdown hits zero you get a soft chime, a time-sensitive
-  banner, and a small panel under the menu bar. It does not steal focus; it just removes the gap
-  where a 2-minute drift becomes 30.
-- Work restarts by itself the moment the break ends — the panel only acknowledges it, and never
-  resets a clock that is already running.
+- Starting a break is silent — stopping work should feel like relief, not an event. When the
+  countdown hits zero you get a soft chime, a time-sensitive banner, and a panel that sits above
+  everything, including full-screen apps, and **stays until you answer it**. It never steals focus.
+- Work does not restart by itself. The app waits, counting nothing, until you click. If the break
+  ends while you are away from the desk, that time lands in no column — counting it as work would
+  inflate the one number here that is meant to be true.
 - Every 10 minutes of work the ring pulses once. Small, cheap, and it lands.
 - Today's loops are logged with totals and the break ratio you actually realized.
 

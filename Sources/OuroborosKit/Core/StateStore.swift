@@ -6,7 +6,7 @@ import Foundation
 /// "relaunched a second after a crash" (resume exactly where we were) and "the Mac rebooted
 /// two hours ago" (close the block at the last heartbeat, never invent the missing time).
 struct PhaseSnapshot: Codable, Equatable {
-    enum Kind: String, Codable { case working, onBreak }
+    enum Kind: String, Codable { case working, onBreak, waiting }
 
     var kind: Kind
     var anchor: Date              // work start, or break start
@@ -18,6 +18,7 @@ struct PhaseSnapshot: Codable, Equatable {
         switch kind {
         case .working: return .working(since: anchor)
         case .onBreak: return .onBreak(start: anchor, duration: duration, workedSeconds: workedSeconds)
+        case .waiting: return .waiting(since: anchor)
         }
     }
 
@@ -35,6 +36,11 @@ struct PhaseSnapshot: Codable, Equatable {
             self.anchor = start
             self.duration = duration
             self.workedSeconds = worked
+        case .waiting(let since):
+            self.kind = .waiting
+            self.anchor = since
+            self.duration = 0
+            self.workedSeconds = 0
         }
         self.heartbeat = heartbeat
     }

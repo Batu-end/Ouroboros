@@ -12,9 +12,6 @@ public final class TimerEngine: ObservableObject {
     /// Bumped once per displayed second; every elapsed/remaining value is derived from it.
     @Published public private(set) var now: Date = .now
 
-    /// Set briefly when a break ends, so the menu bar can announce it even without banners.
-    @Published public private(set) var flashUntil: Date?
-
     /// Whole 10-minute blocks completed in the current work stretch. The ring pulses when
     /// this changes — a small, cheap hit of "that counted".
     @Published public private(set) var milestone: Int = 0
@@ -84,6 +81,12 @@ public final class TimerEngine: ObservableObject {
     /// Seconds already spent in the current break, as last displayed.
     public var breakElapsed: TimeInterval { breakElapsed(at: now) }
 
+    /// How long the next work block has been waiting for a deliberate click.
+    public var waitingElapsed: TimeInterval {
+        guard case .waiting(let since) = phase else { return 0 }
+        return max(0, now.timeIntervalSince(since) * timeScale)
+    }
+
     /// `now` lags by up to one displayed second, which is fine for the readout but wrong for
     /// recording a loop — transitions pass `Date()` here so the log keeps real durations.
     private func workElapsed(at reference: Date) -> TimeInterval {
@@ -126,7 +129,7 @@ public final class TimerEngine: ObservableObject {
     /// invented deadline would be a lie.
     public func ringProgress(at reference: Date) -> Double {
         switch phase {
-        case .idle:
+        case .idle, .waiting:
             return 0
         case .working:
             return workElapsed(at: reference).truncatingRemainder(dividingBy: 60) / 60
@@ -139,44 +142,33 @@ public final class TimerEngine: ObservableObject {
     /// The ring value as of the last published second.
     public var ringProgress: Double { ringProgress(at: now) }
 
-    public var isFlashing: Bool {
-        guard let flashUntil else { return false }
-        return now < flashUntil
-    }
-
     // MARK: - Status item
 
     /// SF Symbol shown in the status bar, by phase.
     public var menuBarSymbol: String {
-        if isFlashing { return "checkmark.circle.fill" }
         switch phase {
         case .idle:      return "infinity"
         case .working:   return "infinity.circle.fill"
         case .onBreak:   return "cup.and.saucer.fill"
+        case .waiting:   return "hourglass"
         }
     }
 
     /// Text beside the symbol. Empty while idle, so the status item stays a bare glyph.
     public var menuBarText: String {
-        if isFlashing { return "back to it" }
         switch phase {
         case .idle:      return ""
         case .working:   return BreakMath.clock(workElapsed)
         case .onBreak:   return BreakMath.clock(breakRemaining)
+        // Shown so a missed panel is still obvious from the menu bar — on another Space,
+        // or behind a full-screen app, this is the only thing the user can see.
+        case .waiting:   return BreakMath.clock(waitingElapsed)
         }
     }
 
     // MARK: - Transitions
 
-    /// Used by the break-over panel: work has already restarted by then, so this must not
-    /// reset the clock — it only covers the case where the user ended the session meanwhile.
-    public func ensureWorking() {
-        guard phase.isIdle else { return }
-        startWork()
-    }
-
     public func startWork() {
-        flashUntil = nil
         breakCompletion = nil
         phase = .working(since: .now)
         milestone = 0
@@ -207,14 +199,18 @@ public final class TimerEngine: ObservableObject {
     /// Leaves the loop entirely; logs whatever the current phase has accumulated.
     public func endSession() {
         switch phase {
-        case .idle:
+        case .idle, .waiting:
+                breakCompletion = nil
+            phase = .idle
+            resetTickCache()
+            persistPhase()
+            stopTicking()
             return
         case .working:
             record(work: workElapsed(at: Date()), rest: 0)
         case .onBreak(_, _, let worked):
             record(work: worked, rest: breakElapsed(at: Date()))
         }
-        flashUntil = nil
         breakCompletion = nil
         milestone = 0
         phase = .idle
@@ -255,6 +251,9 @@ public final class TimerEngine: ObservableObject {
         case .idle:
             stopTicking()
 
+        case .waiting(let since):
+            publish(second: Int(max(0, current.timeIntervalSince(since) * timeScale)), at: current)
+
         case .working(let since):
             let elapsed = max(0, current.timeIntervalSince(since) * timeScale)
             milestone = Int(elapsed / 600)
@@ -270,15 +269,18 @@ public final class TimerEngine: ObservableObject {
         }
     }
 
-    /// The break ran out: announce it, log the loop, and start the next work block.
+    /// The break ran out: announce it, log the loop, and wait for a deliberate restart.
+    ///
+    /// Work does not resume by itself. If the break ends while nobody is at the desk, that
+    /// time belongs in no column — counting it as work would inflate the only number here
+    /// that is supposed to be true.
     private func closeLoop(worked: TimeInterval, duration: TimeInterval) {
         notifier.breakFinished(workSeconds: worked, breakSeconds: duration)
         record(work: worked, rest: duration)
         let completion = BreakCompletion(workSeconds: worked, breakSeconds: duration)
         breakCompletion = completion
         onBreakCompleted?(completion)
-        flashUntil = Date().addingTimeInterval(6)
-        phase = .working(since: .now)
+        phase = .waiting(since: .now)
         milestone = 0
         resetTickCache()
         persistPhase()
@@ -286,7 +288,7 @@ public final class TimerEngine: ObservableObject {
 
     /// Publishes at most once per visible second, to avoid needless redraws.
     private func publish(second: Int, at current: Date) {
-        guard second != lastDisplayedSecond || isFlashing else { return }
+        guard second != lastDisplayedSecond else { return }
         lastDisplayedSecond = second
         now = current
         beat(at: current)
@@ -329,6 +331,15 @@ public final class TimerEngine: ObservableObject {
                 // Close the block at the last heartbeat; the gap was not work.
                 let worked = max(0, snapshot.heartbeat.timeIntervalSince(snapshot.anchor) * timeScale)
                 record(work: worked, rest: 0)
+                phase = .idle
+                persistPhase()
+            }
+
+        case .waiting:
+            if wasRunning {
+                phase = snapshot.phase
+                startTicking()
+            } else {
                 phase = .idle
                 persistPhase()
             }

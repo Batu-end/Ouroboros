@@ -15,6 +15,7 @@ enum Theme {
         case .idle:    return .secondary
         case .working: return work
         case .onBreak: return rest
+        case .waiting: return work
         }
     }
 

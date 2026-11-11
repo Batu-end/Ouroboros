@@ -107,6 +107,10 @@ public struct PopoverView: View {
                 PrimaryActionButton(title: "Start Working", systemImage: "play.fill", tint: Theme.work) {
                     engine.startWork()
                 }
+            case .waiting:
+                PrimaryActionButton(title: "Start Next Block", systemImage: "play.fill", tint: Theme.work) {
+                    engine.startWork()
+                }
             case .working:
                 PrimaryActionButton(title: "I'm Distracted — Take Break", systemImage: "cup.and.saucer.fill", tint: Theme.rest) {
                     engine.takeBreak()
@@ -139,6 +143,7 @@ public struct PopoverView: View {
         case .idle:    return "IDLE"
         case .working: return "WORKING"
         case .onBreak: return "ON BREAK"
+        case .waiting: return "WAITING"
         }
     }
 
@@ -147,6 +152,7 @@ public struct PopoverView: View {
         case .idle:    return "0:00"
         case .working: return BreakMath.clock(engine.workElapsed)
         case .onBreak: return BreakMath.clock(engine.breakRemaining)
+        case .waiting: return BreakMath.clock(engine.waitingElapsed)
         }
     }
 
@@ -154,6 +160,8 @@ public struct PopoverView: View {
         switch engine.phase {
         case .idle:
             return "ready when you are"
+        case .waiting:
+            return "break over — nothing is counting"
         case .working:
             return "banked \(BreakMath.clock(engine.bankedBreak)) break"
         case .onBreak:

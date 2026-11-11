@@ -108,12 +108,12 @@ final class TimerEngineTests: XCTestCase {
 
         try await Task.sleep(for: .milliseconds(900))   // long enough for the break to run out
 
-        XCTAssertTrue(e.phase.isWorking, "break should auto-return to work")
+        XCTAssertTrue(e.phase.isWaiting, "a finished break waits for a deliberate restart")
         XCTAssertEqual(e.sessions.count, 1)
         let logged = try XCTUnwrap(e.sessions.first)
         XCTAssertEqual(logged.breakSeconds, duration, accuracy: 0.001, "full break was taken")
         XCTAssertEqual(logged.workSeconds, worked, accuracy: 0.001)
-        XCTAssertNotNil(e.flashUntil, "menu bar fallback announcement was armed")
+        XCTAssertEqual(e.menuBarSymbol, "hourglass", "the menu bar must show it is waiting")
     }
 
     /// Regression: the tick used to measure elapsed time against its own published
@@ -355,26 +355,57 @@ final class TimerEngineTests: XCTestCase {
         XCTAssertNil(state.loadPhase(), "an idle app restores to idle")
     }
 
-    /// The break-over panel must not restart the clock: work resumed the moment the break
-    /// ended, so a second start would throw away everything since.
-    func testEnsureWorkingDoesNotResetARunningClock() async throws {
-        let e = engine()
+    /// Waiting time is counted as neither work nor break: it is simply not at the desk.
+    func testWaitingTimeIsNeverCountedAsWork() async throws {
+        let e = engine(timeScale: 600)
         e.startWork()
-        try await Task.sleep(for: .milliseconds(1200))
-        let before = e.workElapsed
+        try await Task.sleep(for: .milliseconds(400))
+        e.takeBreak()
+        try await Task.sleep(for: .milliseconds(400))   // long enough for the break to end
 
-        e.ensureWorking()
+        XCTAssertTrue(e.phase.isWaiting)
+        let loggedBefore = e.sessions.totalWork
+        XCTAssertEqual(e.workElapsed, 0, "nothing accrues while waiting")
 
+        try await Task.sleep(for: .milliseconds(300))
+        XCTAssertGreaterThan(e.waitingElapsed, 0, "but the wait itself is shown")
+        XCTAssertEqual(e.sessions.totalWork, loggedBefore, accuracy: 0.001, "and never logged")
+
+        e.startWork()
         XCTAssertTrue(e.phase.isWorking)
-        XCTAssertGreaterThanOrEqual(e.workElapsed, before, "the clock must keep running")
-        XCTAssertTrue(e.sessions.isEmpty, "and nothing is logged or discarded")
+        XCTAssertLessThan(e.workElapsed, 60, "the new block starts from zero")
     }
 
-    func testEnsureWorkingStartsFromIdle() {
-        let e = engine()
+    func testEndSessionFromWaitingGoesIdleWithoutLogging() async throws {
+        let e = engine(timeScale: 600)
+        e.startWork()
+        try await Task.sleep(for: .milliseconds(400))
+        e.takeBreak()
+        try await Task.sleep(for: .milliseconds(400))
+        XCTAssertTrue(e.phase.isWaiting)
+
+        let logged = e.sessions.count
+        e.endSession()
+
         XCTAssertTrue(e.phase.isIdle)
-        e.ensureWorking()
-        XCTAssertTrue(e.phase.isWorking, "if the session was ended meanwhile, start one")
+        XCTAssertFalse(e.isTicking)
+        XCTAssertEqual(e.sessions.count, logged, "the loop was already logged when it closed")
+    }
+
+    func testWaitingIsRestoredAfterAQuickCrashAndDroppedAfterAReboot() {
+        let defaults = UserDefaults(suiteName: "ouroboros.tests.\(UUID().uuidString)")!
+        let state = StateStore(defaults: defaults)
+        state.savePhase(PhaseSnapshot(phase: .waiting(since: Date().addingTimeInterval(-30)),
+                                      heartbeat: Date().addingTimeInterval(-4)))
+        let fresh = TimerEngine(store: SessionStore(defaults: defaults), state: state, timeScale: 1)
+        XCTAssertTrue(fresh.phase.isWaiting)
+
+        let stale = UserDefaults(suiteName: "ouroboros.tests.\(UUID().uuidString)")!
+        let staleState = StateStore(defaults: stale)
+        staleState.savePhase(PhaseSnapshot(phase: .waiting(since: Date().addingTimeInterval(-7200)),
+                                           heartbeat: Date().addingTimeInterval(-7000)))
+        let rebooted = TimerEngine(store: SessionStore(defaults: stale), state: staleState, timeScale: 1)
+        XCTAssertTrue(rebooted.phase.isIdle, "a wait from before a reboot is meaningless")
     }
 
     func testTransitionsIgnoreWrongPhase() {

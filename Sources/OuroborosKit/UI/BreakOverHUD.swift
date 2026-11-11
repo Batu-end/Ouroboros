@@ -1,17 +1,18 @@
 import AppKit
 import SwiftUI
 
-/// A small panel that appears under the menu bar when a break runs out.
+/// A small panel that appears under the menu bar when a break runs out, and stays until it
+/// is answered.
 ///
-/// The popover itself cannot be opened programmatically, and a banner is easy to miss — the
-/// gap between "break over" and "back at it" is exactly where a 30-minute drift starts. This
-/// puts the hand-off in front of the user without stealing focus from whatever is open: it
-/// is a non-activating panel, so typing continues to go wherever it was going.
+/// The popover cannot be opened programmatically and a banner is easy to miss, so this is
+/// the hand-off: the next work block starts when its button is clicked, and not before. It
+/// does not steal focus — a non-activating panel, so typing keeps going where it was going —
+/// and it does not time out, because a panel that quietly vanishes is the drift it exists to
+/// prevent.
 @MainActor
 enum BreakOverHUD {
 
     private static var panel: NSPanel?
-    private static var dismissTask: Task<Void, Never>?
 
     static func show(workSeconds: TimeInterval, breakSeconds: TimeInterval, onResume: @escaping () -> Void) {
         dismiss()
@@ -37,7 +38,9 @@ enum BreakOverHUD {
         window.isOpaque = false
         window.backgroundColor = .clear
         window.hasShadow = true
-        window.level = .floating
+        // Above full-screen apps too: this is the only cue that the clock is waiting, and
+        // a panel nobody can see is the drift it exists to prevent.
+        window.level = .statusBar
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
         window.hidesOnDeactivate = false
         window.isMovableByWindowBackground = true
@@ -50,18 +53,9 @@ enum BreakOverHUD {
 
         window.orderFrontRegardless()
         panel = window
-
-        // Long enough to notice, short enough not to become furniture.
-        dismissTask = Task {
-            try? await Task.sleep(for: .seconds(12))
-            guard !Task.isCancelled else { return }
-            dismiss()
-        }
     }
 
     static func dismiss() {
-        dismissTask?.cancel()
-        dismissTask = nil
         panel?.orderOut(nil)
         panel = nil
     }
@@ -89,12 +83,12 @@ private struct HUDContent: View {
                 .buttonStyle(.plain)
             }
 
-            Text("\(BreakMath.humane(rested)) of rest from \(BreakMath.humane(worked)) of work. The work clock is already running again.")
+            Text("\(BreakMath.humane(rested)) of rest from \(BreakMath.humane(worked)) of work. The clock is paused until you start the next block.")
                 .font(.system(size: 11))
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
-            PrimaryActionButton(title: "Got It", systemImage: "checkmark", tint: Theme.work, action: onResume)
+            PrimaryActionButton(title: "Start Next Block", systemImage: "play.fill", tint: Theme.work, action: onResume)
         }
         .padding(12)
         .frame(width: 290, alignment: .leading)
