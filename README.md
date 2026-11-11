@@ -8,7 +8,7 @@ A macOS menu bar focus timer that earns your breaks instead of scheduling them.
 
 Pomodoro assumes you can start and stop on command. Ouroboros assumes you can't. You work as
 long as the focus holds; the moment it breaks you hit one button, and the app pays you back
-**18% of the time you actually worked** as break time. Work feeds break feeds work — a loop that
+**15% of the time you actually worked** as break time. Work feeds break feeds work — a loop that
 closes on itself. No Dock icon, no windows, no streaks to lose.
 
 ## The loop
@@ -19,7 +19,7 @@ closes on itself. No Dock icon, no windows, no streaks to lose.
 | Working | `💼 14:25` (counting up) | **I'm Distracted — Take Break** |
 | On break | `☕ 02:45` (counting down) | Resume Work Early |
 
-- `EarnedBreak = WorkedSeconds × 0.18`, with a hard floor of **60 seconds** — a two-minute work
+- `EarnedBreak = WorkedSeconds × 0.15`, with a hard floor of **60 seconds** — a two-minute work
   block still buys a real minute off, so there is never a reason to push through.
 - When the countdown hits zero you get a soft chime and a banner, and the app drops you straight
   back into Working. The loop never leaves you stranded at a dead stop.
@@ -50,7 +50,7 @@ Tests:
 swift test
 ```
 
-Covers the 18% math, the 60-second floor, clock formatting, every phase transition, and a full
+Covers the 15% math, the 60-second floor, clock formatting, every phase transition, and a full
 work → break-expiry → work loop (driven at 600× speed).
 
 ### Fast mode
@@ -97,7 +97,7 @@ lsappinfo info -only ApplicationType "$(pgrep -x Ouroboros)"
 
 ```
 Sources/OuroborosKit/
-  Core/BreakMath.swift          pure rules: 18% ratio, 60s floor, formatting  (unit tested)
+  Core/BreakMath.swift          pure rules: 15% ratio, 60s floor, formatting  (unit tested)
   Core/AppPhase.swift           idle / working(since:) / onBreak(start:duration:worked:)
   Core/TimerEngine.swift        the only mutable state: phase machine + 5Hz tick + log
   Core/SessionStore.swift       Codable sessions in UserDefaults, 60-day window

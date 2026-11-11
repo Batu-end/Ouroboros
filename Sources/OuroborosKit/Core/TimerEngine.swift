@@ -137,7 +137,7 @@ public final class TimerEngine: ObservableObject {
         resetTickCache()
     }
 
-    /// "I'm Distracted / Take Break" — bank 18% of what was actually worked.
+    /// "I'm Distracted / Take Break" — bank 15% of what was actually worked.
     public func takeBreak() {
         guard case .working = phase else { return }
         let worked = workElapsed(at: Date())

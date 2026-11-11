@@ -4,7 +4,7 @@ import Foundation
 public enum BreakMath {
 
     /// Fraction of worked time that is banked as break time.
-    public static let ratio: Double = 0.18
+    public static let ratio: Double = 0.15
 
     /// A break is never shorter than this, no matter how brief the work block was.
     public static let minimumBreak: TimeInterval = 60
@@ -33,7 +33,7 @@ public enum BreakMath {
         return "\(m)m"
     }
 
-    /// Realized break ratio across a set of sessions, as a percentage string (`18%`).
+    /// Realized break ratio across a set of sessions, as a percentage string (`15%`).
     public static func ratioLabel(work: TimeInterval, rest: TimeInterval) -> String {
         guard work > 0 else { return "—" }
         return "\(Int((rest / work * 100).rounded()))%"

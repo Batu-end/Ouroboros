@@ -4,21 +4,22 @@ import XCTest
 
 final class BreakMathTests: XCTestCase {
 
-    func testEarnedBreakIsEighteenPercent() {
-        XCTAssertEqual(BreakMath.earnedBreak(forWork: 3600), 648, accuracy: 0.001)   // 1h → 10:48
-        XCTAssertEqual(BreakMath.earnedBreak(forWork: 1500), 270, accuracy: 0.001)   // 25m → 4:30
+    func testEarnedBreakIsFifteenPercent() {
+        XCTAssertEqual(BreakMath.earnedBreak(forWork: 3600), 540, accuracy: 0.001)   // 1h → 9:00
+        XCTAssertEqual(BreakMath.earnedBreak(forWork: 1500), 225, accuracy: 0.001)   // 25m → 3:45
+        XCTAssertEqual(BreakMath.earnedBreak(forWork: 5400), 810, accuracy: 0.001)   // 1h30 → 13:30
     }
 
     func testMinimumBreakFloor() {
         XCTAssertEqual(BreakMath.earnedBreak(forWork: 0), 60)
-        XCTAssertEqual(BreakMath.earnedBreak(forWork: 120), 60)      // 21.6s earned → floored
+        XCTAssertEqual(BreakMath.earnedBreak(forWork: 120), 60)      // 18s earned → floored
         XCTAssertEqual(BreakMath.earnedBreak(forWork: -500), 60)     // nonsense input stays safe
     }
 
     func testFloorAppliesExactlyAtTheCrossover() {
-        // 60s / 0.18 = 333.33s of work is where the ratio overtakes the floor.
-        XCTAssertEqual(BreakMath.earnedBreak(forWork: 330), 60)
-        XCTAssertGreaterThan(BreakMath.earnedBreak(forWork: 340), 60)
+        // 60s / 0.15 = 400s of work is where the ratio overtakes the floor.
+        XCTAssertEqual(BreakMath.earnedBreak(forWork: 395), 60)
+        XCTAssertGreaterThan(BreakMath.earnedBreak(forWork: 410), 60)
     }
 
     func testClockFormatting() {
@@ -38,7 +39,7 @@ final class BreakMathTests: XCTestCase {
     }
 
     func testRatioLabel() {
-        XCTAssertEqual(BreakMath.ratioLabel(work: 1000, rest: 180), "18%")
+        XCTAssertEqual(BreakMath.ratioLabel(work: 1000, rest: 150), "15%")
         XCTAssertEqual(BreakMath.ratioLabel(work: 0, rest: 0), "—")
     }
 }
