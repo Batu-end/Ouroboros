@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="Resources/AppIcon-preview.png" width="160" alt="Ouroboros app icon">
+</p>
+
 # Ouroboros
 
 A macOS menu bar focus timer that earns your breaks instead of scheduling them.
@@ -112,3 +116,22 @@ Two deliberate choices:
   matters instead: how much break you have banked so far.
 
 Pure SwiftUI + Combine + UserNotifications. No dependencies. macOS 14+.
+
+## Icon
+
+`Resources/AppIcon.icns` is generated, not hand-drawn:
+
+```bash
+swift Tools/MakeIcon.swift path/to/line-art.jpg
+```
+
+[`Tools/MakeIcon.swift`](Tools/MakeIcon.swift) keys the flat background out of a piece of dark
+linework by luminance, crops to the ink, recolors it, and composites it onto a dark rounded-square
+plate with a teal halo — then emits every size from 16px to 1024px via `iconutil`. Point it at any
+other line drawing to reskin the app.
+
+Since the app is an agent (`LSUIElement`), this icon never appears in the Dock; it shows up in
+Finder, Spotlight and notification banners.
+
+> **Attribution:** the ouroboros engraving this icon is derived from came from a blog post and its
+> rights holder is unverified. Swap in your own artwork before using this anywhere public.
