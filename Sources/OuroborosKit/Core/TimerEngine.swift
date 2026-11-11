@@ -96,13 +96,23 @@ public final class TimerEngine: ObservableObject {
         return now < flashUntil
     }
 
-    /// What the status bar shows, by phase.
-    public var menuBarTitle: String {
-        if isFlashing { return "✅ back to it" }
+    /// SF Symbol shown in the status bar, by phase.
+    public var menuBarSymbol: String {
+        if isFlashing { return "checkmark.circle.fill" }
         switch phase {
-        case .idle:      return "⟳"
-        case .working:   return "💼 \(BreakMath.clock(workElapsed))"
-        case .onBreak:   return "☕ \(BreakMath.clock(breakRemaining))"
+        case .idle:      return "infinity"
+        case .working:   return "briefcase.fill"
+        case .onBreak:   return "cup.and.saucer.fill"
+        }
+    }
+
+    /// Text beside the symbol. Empty while idle, so the status item stays a bare glyph.
+    public var menuBarText: String {
+        if isFlashing { return "back to it" }
+        switch phase {
+        case .idle:      return ""
+        case .working:   return BreakMath.clock(workElapsed)
+        case .onBreak:   return BreakMath.clock(breakRemaining)
         }
     }
 
