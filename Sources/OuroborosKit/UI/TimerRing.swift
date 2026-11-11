@@ -14,7 +14,9 @@ struct TimerRing: View {
     /// Whole 10-minute work blocks completed; a change fires the pulse.
     let milestone: Int
 
-    @State private var pulse = false
+    /// 1 at the instant of a milestone, animated down to 0 — which is also its resting value,
+    /// so the flash ring is fully invisible unless it is actually firing.
+    @State private var pulse: Double = 0
     @State private var onScreen = false
 
     private var accent: Color { Theme.accent(for: phase) }
@@ -31,22 +33,10 @@ struct TimerRing: View {
             // 30fps is indistinguishable from display rate for a sweeping ring and a
             // fraction of the cost; paused outright whenever the popover is not on screen.
             TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: !onScreen || phase.isIdle)) { context in
-                Circle()
-                    .trim(from: 0, to: max(0.0001, progress(context.date)))
-                    .stroke(
-                        AngularGradient(colors: [accent.opacity(0.55), accent], center: .center),
-                        style: StrokeStyle(lineWidth: 8, lineCap: .round)
-                    )
-                    .rotationEffect(.degrees(-90))
-                    .shadow(color: accent.opacity(0.35), radius: 6)
+                RingArc(progress: progress(context.date), accent: accent)
             }
 
-            // The milestone flash: a full ring that blooms outward and fades.
-            Circle()
-                .stroke(accent, lineWidth: 8)
-                .scaleEffect(pulse ? 1.14 : 1.0)
-                .opacity(pulse ? 0 : 0.85)
-                .allowsHitTesting(false)
+            MilestoneFlash(pulse: pulse, accent: accent)
 
             VStack(spacing: 2) {
                 Text(primary)
@@ -69,12 +59,44 @@ struct TimerRing: View {
         .animation(.easeOut(duration: 0.25), value: readoutSize)
         .onChange(of: milestone) { _, new in
             guard new > 0 else { return }   // only real 10-minute marks, not resets
-            pulse = false
-            withAnimation(.easeOut(duration: 0.9)) { pulse = true }
-            Task {
-                try? await Task.sleep(for: .milliseconds(950))
-                pulse = false
-            }
+            pulse = 1
+            withAnimation(.easeOut(duration: 0.9)) { pulse = 0 }
         }
+    }
+}
+
+/// The swept arc itself, split out from `TimerRing` so it can be rendered — and therefore
+/// tested — without the `TimelineView` that drives it (`ImageRenderer` cannot draw one).
+struct RingArc: View {
+    let progress: Double
+    let accent: Color
+
+    var body: some View {
+        Circle()
+            .trim(from: 0, to: max(0.0001, progress))
+            .stroke(
+                AngularGradient(colors: [accent.opacity(0.55), accent], center: .center),
+                style: StrokeStyle(lineWidth: 8, lineCap: .round)
+            )
+            .rotationEffect(.degrees(-90))
+            .shadow(color: accent.opacity(0.35), radius: 6)
+    }
+}
+
+/// The 10-minute flash: a full ring that blooms outward and fades.
+///
+/// `pulse` is 1 at the instant of a milestone and 0 the rest of the time. Resting at zero
+/// opacity is the whole contract: an earlier version rested at 0.85 and quietly covered the
+/// progress arc with a full ring.
+struct MilestoneFlash: View {
+    let pulse: Double
+    let accent: Color
+
+    var body: some View {
+        Circle()
+            .stroke(accent, lineWidth: 8)
+            .scaleEffect(1 + 0.14 * (1 - pulse))
+            .opacity(0.85 * pulse)
+            .allowsHitTesting(false)
     }
 }

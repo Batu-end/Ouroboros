@@ -23,7 +23,9 @@ struct WindowVisibility: NSViewRepresentable {
         (nsView as? ProbeView)?.report()
     }
 
-    private final class ProbeView: NSView {
+    /// Internal rather than private so the gate can be tested: a probe that wrongly reports
+    /// "hidden" freezes the ring, which is invisible in a unit test but obvious to a user.
+    final class ProbeView: NSView {
         var onChange: ((Bool) -> Void)?
         private var observers: [any NSObjectProtocol] = []
 
@@ -52,11 +54,11 @@ struct WindowVisibility: NSViewRepresentable {
                 onChange?(false)
                 return
             }
-            // A key window is on screen by definition; the occlusion check is only there to
-            // pause when the panel is fully covered, and must never freeze a visible ring.
-            let visible = window.isVisible
-                && (window.isKeyWindow || window.occlusionState.contains(.visible))
-            onChange?(visible)
+            // `isVisible` alone, deliberately. Occlusion state is updated asynchronously by
+            // the window server, so consulting it the instant the popover opens can report
+            // "hidden" and leave the ring frozen. Closing the popover orders the window out,
+            // which flips `isVisible` immediately — that is the case worth catching.
+            onChange?(window.isVisible)
         }
     }
 }
