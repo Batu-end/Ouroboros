@@ -9,13 +9,16 @@ enum Theme {
     /// it marks the boundary between hustle and rest before any text is read.
     static let work = Color(red: 0.23, green: 0.72, blue: 0.72)
     static let rest = Color(red: 0.89, green: 0.62, blue: 0.29)
+    /// Neither working nor resting: the hand-off gets its own colour so the three live
+    /// states are never confused at a glance.
+    static let waiting = Color(red: 0.62, green: 0.50, blue: 0.89)
 
     static func accent(for phase: AppPhase) -> Color {
         switch phase {
         case .idle:    return .secondary
         case .working: return work
         case .onBreak: return rest
-        case .waiting: return work
+        case .waiting: return waiting
         }
     }
 

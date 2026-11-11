@@ -108,7 +108,7 @@ public struct PopoverView: View {
                     engine.startWork()
                 }
             case .waiting:
-                PrimaryActionButton(title: "Start Next Block", systemImage: "play.fill", tint: Theme.work) {
+                PrimaryActionButton(title: "Start Next Block", systemImage: "play.fill", tint: Theme.waiting) {
                     engine.startWork()
                 }
             case .working:
@@ -161,7 +161,7 @@ public struct PopoverView: View {
         case .idle:
             return "ready when you are"
         case .waiting:
-            return "break over — nothing is counting"
+            return "nothing is counting"
         case .working:
             return "banked \(BreakMath.clock(engine.bankedBreak)) break"
         case .onBreak:

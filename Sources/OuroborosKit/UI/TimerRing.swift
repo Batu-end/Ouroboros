@@ -38,21 +38,7 @@ struct TimerRing: View {
 
             MilestoneFlash(pulse: pulse, accent: accent)
 
-            VStack(spacing: 2) {
-                Text(primary)
-                    .font(.system(size: readoutSize, weight: .medium, design: .rounded))
-                    .monospacedDigit()
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.65)
-                    .contentTransition(.numericText())
-                    .frame(width: 126)
-                Text(caption)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-                    .transition(.blurReplace)
-            }
+            RingReadout(primary: primary, caption: caption, size: readoutSize)
         }
         .frame(width: 148, height: 148)
         .background(WindowVisibility(isVisible: $onScreen))
@@ -71,9 +57,17 @@ struct RingArc: View {
     let progress: Double
     let accent: Color
 
+    /// Exactly zero draws nothing. A blanket floor above zero would leave a lone round cap
+    /// parked at 12 o'clock through the whole idle and waiting phases, while a sliver of
+    /// real progress still needs to be visible.
+    static func trimEnd(for progress: Double) -> Double {
+        guard progress > 0 else { return 0 }
+        return min(1, max(progress, 0.004))
+    }
+
     var body: some View {
         Circle()
-            .trim(from: 0, to: max(0.0001, progress))
+            .trim(from: 0, to: Self.trimEnd(for: progress))
             // The gradient starts and ends on the same colour. An angular gradient that
             // ramps from faded to solid leaves a seam where it wraps, and paints the arc's
             // leading round cap in the faded shade — which read as a pale blob stuck to the
@@ -105,5 +99,37 @@ struct MilestoneFlash: View {
             .scaleEffect(1 + 0.14 * (1 - pulse))
             .opacity(0.85 * pulse)
             .allowsHitTesting(false)
+    }
+}
+
+/// The digits and their one-line caption, split out so the layout can be rendered and
+/// measured: a caption that spills outside the ring is a visual bug a logic test cannot see.
+struct RingReadout: View {
+    let primary: String
+    let caption: String
+    let size: CGFloat
+
+    /// The widest a line can be and still sit inside a 148pt ring drawn with an 8pt stroke.
+    static let innerWidth: CGFloat = 104
+
+    var body: some View {
+        VStack(spacing: 2) {
+            Text(primary)
+                .font(.system(size: size, weight: .medium, design: .rounded))
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.65)
+                .contentTransition(.numericText())
+                .frame(width: 126)
+            Text(caption)
+                .font(.system(size: 10))
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .minimumScaleFactor(0.75)
+                .frame(width: Self.innerWidth)
+                .fixedSize(horizontal: false, vertical: true)
+                .transition(.blurReplace)
+        }
     }
 }

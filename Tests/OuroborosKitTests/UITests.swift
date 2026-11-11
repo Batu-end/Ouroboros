@@ -40,6 +40,16 @@ final class RingRenderTests: XCTestCase {
                                     "the leading cap must not be washed out")
     }
 
+    /// At zero progress the arc must draw nothing at all — not a stray cap at 12 o'clock,
+    /// which is what idle and waiting would otherwise show for their whole duration.
+    func testZeroProgressTrimsToNothing() {
+        XCTAssertEqual(RingArc.trimEnd(for: 0), 0)
+        XCTAssertEqual(RingArc.trimEnd(for: -1), 0)
+        XCTAssertEqual(RingArc.trimEnd(for: 0.0001), 0.004, "a real sliver stays visible")
+        XCTAssertEqual(RingArc.trimEnd(for: 0.5), 0.5)
+        XCTAssertEqual(RingArc.trimEnd(for: 1.4), 1, "never past a full circle")
+    }
+
     /// And a firing flash must be visible, or the micro-reward never lands. (That it is
     /// *invisible* at rest is covered above, where it is composited over the arc — the case
     /// that actually regressed. Rendering it alone here would be flaky: successive
@@ -90,11 +100,38 @@ final class RingRenderTests: XCTestCase {
 
     nonisolated(unsafe) static var renderIndex = 0
 
+    /// Every caption the app can show must fit inside the ring. The waiting phase's copy
+    /// used to run past the stroke on both sides.
+    func testEveryCaptionFitsInsideTheRing() throws {
+        let captions = [
+            "ready when you are",
+            "nothing is counting",
+            "banked 10:48 break",
+            "15m from 1h 40m worked",
+        ]
+
+        for caption in captions {
+            let readout = RingReadout(primary: "1:02:05", caption: caption, size: 28)
+            let measured = try measure(readout)
+            XCTAssertLessThanOrEqual(measured.width, RingReadout.innerWidth + 24,
+                                     "\"\(caption)\" spills out of the ring")
+            XCTAssertLessThanOrEqual(measured.height, 96, "\"\(caption)\" is too tall for the ring")
+        }
+    }
+
+    private func measure(_ view: some View) throws -> CGSize {
+        let renderer = ImageRenderer(content: view.id(UUID()))
+        renderer.scale = 1
+        let image = try XCTUnwrap(renderer.cgImage)
+        return CGSize(width: image.width, height: image.height)
+    }
+
     // MARK: Helpers
 
     private func render(_ view: some View) throws -> NSBitmapImageRep {
-        // `.id(UUID())` forces a fresh identity per render: inside one test process,
-        // successive ImageRenderers can otherwise hand back the previous view's image.
+        // Successive `ImageRenderer`s in one process can hand back the previous view's
+        // image unless the run loop is given a turn between them.
+        RunLoop.current.run(until: Date().addingTimeInterval(0.02))
         let renderer = ImageRenderer(content: view.frame(width: 152, height: 152).id(UUID()))
         renderer.scale = 1
         let cg = try XCTUnwrap(renderer.cgImage)

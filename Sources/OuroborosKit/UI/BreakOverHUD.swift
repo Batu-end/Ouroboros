@@ -38,17 +38,19 @@ enum BreakOverHUD {
         window.isOpaque = false
         window.backgroundColor = .clear
         window.hasShadow = true
-        // Above full-screen apps too: this is the only cue that the clock is waiting, and
-        // a panel nobody can see is the drift it exists to prevent.
-        window.level = .statusBar
+        // Above ordinary windows and full-screen apps, but *below* the menu bar's own
+        // level. At .statusBar this panel competed with the status items themselves, which
+        // made the clock blink out of the menu bar for several seconds at a time.
+        window.level = .floating
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
         window.hidesOnDeactivate = false
         window.isMovableByWindowBackground = true
 
         if let screen = NSScreen.main {
             let frame = screen.visibleFrame
+            // Clear of the menu bar strip, so it never overlaps the status items.
             window.setFrameOrigin(NSPoint(x: frame.maxX - hosting.frame.width - 18,
-                                          y: frame.maxY - hosting.frame.height - 10))
+                                          y: frame.maxY - hosting.frame.height - 24))
         }
 
         window.orderFrontRegardless()
@@ -70,8 +72,8 @@ private struct HUDContent: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 7) {
-                Image(systemName: "infinity.circle.fill")
-                    .foregroundStyle(Theme.work)
+                Image(systemName: "hourglass")
+                    .foregroundStyle(Theme.waiting)
                 Text("Break's over")
                     .font(.system(size: 13, weight: .semibold))
                 Spacer()
@@ -88,7 +90,7 @@ private struct HUDContent: View {
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
-            PrimaryActionButton(title: "Start Next Block", systemImage: "play.fill", tint: Theme.work, action: onResume)
+            PrimaryActionButton(title: "Start Next Block", systemImage: "play.fill", tint: Theme.waiting, action: onResume)
         }
         .padding(12)
         .frame(width: 290, alignment: .leading)
