@@ -8,8 +8,6 @@ struct TimerRing: View {
     let primary: String
     let caption: String
 
-    @State private var breathing = false
-
     private var accent: Color { Theme.accent(for: phase) }
 
     var body: some View {
@@ -39,8 +37,5 @@ struct TimerRing: View {
             }
         }
         .frame(width: 148, height: 148)
-        .scaleEffect(phase.isWorking && breathing ? 1.012 : 1.0)
-        .animation(.easeInOut(duration: 2.4).repeatForever(autoreverses: true), value: breathing)
-        .onAppear { breathing = true }
     }
 }

@@ -43,16 +43,22 @@ public final class TimerEngine: ObservableObject {
 
     // MARK: - Derived time
 
-    /// Seconds worked in the current work block (counts up, open-ended).
-    public var workElapsed: TimeInterval {
+    /// Seconds worked in the current work block (counts up, open-ended), as last displayed.
+    public var workElapsed: TimeInterval { workElapsed(at: now) }
+
+    /// Seconds already spent in the current break, as last displayed.
+    public var breakElapsed: TimeInterval { breakElapsed(at: now) }
+
+    /// `now` lags by up to one displayed second, which is fine for the readout but wrong for
+    /// recording a loop — transitions pass `Date()` here so the log keeps real durations.
+    private func workElapsed(at reference: Date) -> TimeInterval {
         guard case .working(let since) = phase else { return 0 }
-        return max(0, now.timeIntervalSince(since) * timeScale)
+        return max(0, reference.timeIntervalSince(since) * timeScale)
     }
 
-    /// Seconds already spent in the current break.
-    public var breakElapsed: TimeInterval {
+    private func breakElapsed(at reference: Date) -> TimeInterval {
         guard case .onBreak(let start, _, _) = phase else { return 0 }
-        return max(0, now.timeIntervalSince(start) * timeScale)
+        return max(0, reference.timeIntervalSince(start) * timeScale)
     }
 
     /// Seconds left in the current break (counts down).
@@ -101,7 +107,7 @@ public final class TimerEngine: ObservableObject {
         if isFlashing { return "checkmark.circle.fill" }
         switch phase {
         case .idle:      return "infinity"
-        case .working:   return "briefcase.fill"
+        case .working:   return "infinity.circle.fill"
         case .onBreak:   return "cup.and.saucer.fill"
         }
     }
@@ -127,7 +133,7 @@ public final class TimerEngine: ObservableObject {
     /// "I'm Distracted / Take Break" — bank 18% of what was actually worked.
     public func takeBreak() {
         guard case .working = phase else { return }
-        let worked = workElapsed
+        let worked = workElapsed(at: Date())
         let earned = BreakMath.earnedBreak(forWork: worked)
         phase = .onBreak(start: .now, duration: earned, workedSeconds: worked)
         resetTickCache()
@@ -136,7 +142,7 @@ public final class TimerEngine: ObservableObject {
     /// "Resume Work Early" / "Skip Break" — log the break actually taken and loop back to work.
     public func resumeWork() {
         guard case .onBreak(_, _, let worked) = phase else { return }
-        record(work: worked, rest: breakElapsed)
+        record(work: worked, rest: breakElapsed(at: Date()))
         startWork()
     }
 
@@ -146,9 +152,9 @@ public final class TimerEngine: ObservableObject {
         case .idle:
             return
         case .working:
-            record(work: workElapsed, rest: 0)
+            record(work: workElapsed(at: Date()), rest: 0)
         case .onBreak(_, _, let worked):
-            record(work: worked, rest: breakElapsed)
+            record(work: worked, rest: breakElapsed(at: Date()))
         }
         flashUntil = nil
         phase = .idle
@@ -158,30 +164,42 @@ public final class TimerEngine: ObservableObject {
     // MARK: - Tick
 
     private func tick() {
-        let elapsedInPhase: TimeInterval
+        // Read the wall clock directly. Deriving this from `now` would be circular: `now`
+        // only moves when the displayed second changes, so elapsed time would be measured
+        // against a timestamp that never advances and the readout would freeze at 0:00.
+        let current = Date()
+
         switch phase {
-        case .idle:    elapsedInPhase = 0
-        case .working: elapsedInPhase = workElapsed
-        case .onBreak: elapsedInPhase = breakElapsed
-        }
+        case .idle:
+            publish(second: 0, at: current)
 
-        // Expiry is checked against the real clock, not against a counter.
-        if case .onBreak(_, let duration, let worked) = phase, elapsedInPhase >= duration {
-            notifier.breakFinished(workSeconds: worked, breakSeconds: duration)
-            record(work: worked, rest: duration)
-            flashUntil = Date().addingTimeInterval(6)
-            phase = .working(since: .now)
-            resetTickCache()
-            now = .now
-            return
-        }
+        case .working(let since):
+            publish(second: Int(max(0, current.timeIntervalSince(since) * timeScale)), at: current)
 
-        // Only publish when the visible second changes, to avoid needless redraws.
-        let second = Int(elapsedInPhase)
-        if second != lastDisplayedSecond || isFlashing {
-            lastDisplayedSecond = second
-            now = .now
+        case .onBreak(let start, let duration, let worked):
+            let elapsed = max(0, current.timeIntervalSince(start) * timeScale)
+            guard elapsed < duration else {
+                closeLoop(worked: worked, duration: duration)
+                return
+            }
+            publish(second: Int(elapsed), at: current)
         }
+    }
+
+    /// The break ran out: announce it, log the loop, and start the next work block.
+    private func closeLoop(worked: TimeInterval, duration: TimeInterval) {
+        notifier.breakFinished(workSeconds: worked, breakSeconds: duration)
+        record(work: worked, rest: duration)
+        flashUntil = Date().addingTimeInterval(6)
+        phase = .working(since: .now)
+        resetTickCache()
+    }
+
+    /// Publishes at most once per visible second, to avoid needless redraws.
+    private func publish(second: Int, at current: Date) {
+        guard second != lastDisplayedSecond || isFlashing else { return }
+        lastDisplayedSecond = second
+        now = current
     }
 
     private func resetTickCache() {

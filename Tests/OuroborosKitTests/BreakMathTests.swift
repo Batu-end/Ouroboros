@@ -1,3 +1,4 @@
+import AppKit
 import XCTest
 @testable import OuroborosKit
 
@@ -107,6 +108,47 @@ final class TimerEngineTests: XCTestCase {
         XCTAssertEqual(logged.breakSeconds, duration, accuracy: 0.001, "full break was taken")
         XCTAssertEqual(logged.workSeconds, worked, accuracy: 0.001)
         XCTAssertNotNil(e.flashUntil, "menu bar fallback announcement was armed")
+    }
+
+    /// Regression: the tick used to measure elapsed time against its own published
+    /// timestamp, which only moved when the displayed second changed — so at normal speed
+    /// the readout froze at 0:00 forever. Fast mode hid it, because the large scale factor
+    /// always pushed the second over.
+    func testClockActuallyAdvancesAtRealSpeed() async throws {
+        let defaults = UserDefaults(suiteName: "ouroboros.tests.\(UUID().uuidString)")!
+        let e = TimerEngine(store: SessionStore(defaults: defaults), timeScale: 1)
+
+        e.startWork()
+        try await Task.sleep(for: .milliseconds(1300))
+
+        XCTAssertGreaterThanOrEqual(e.workElapsed, 1, "work clock must advance in real time")
+        XCTAssertEqual(e.menuBarText, BreakMath.clock(e.workElapsed))
+        XCTAssertNotEqual(e.menuBarText, "0:00")
+    }
+
+    /// Every SF Symbol the status item asks for must exist on this OS.
+    func testMenuBarSymbolsResolve() {
+        let defaults = UserDefaults(suiteName: "ouroboros.tests.\(UUID().uuidString)")!
+        let e = TimerEngine(store: SessionStore(defaults: defaults), timeScale: 1)
+
+        XCTAssertNotNil(NSImage(systemSymbolName: e.menuBarSymbol, accessibilityDescription: nil))
+        e.startWork()
+        XCTAssertEqual(e.menuBarSymbol, "infinity.circle.fill")
+        XCTAssertNotNil(NSImage(systemSymbolName: e.menuBarSymbol, accessibilityDescription: nil))
+        e.takeBreak()
+        XCTAssertEqual(e.menuBarSymbol, "cup.and.saucer.fill")
+        XCTAssertNotNil(NSImage(systemSymbolName: e.menuBarSymbol, accessibilityDescription: nil))
+    }
+
+    /// The drawn status item must have real pixels, or the menu bar shows nothing.
+    func testStatusItemImageHasSize() {
+        let withText = StatusItemImage.make(symbol: "infinity.circle.fill", text: "14:25")
+        XCTAssertGreaterThan(withText.size.width, 20)
+        XCTAssertGreaterThan(withText.size.height, 0)
+        XCTAssertTrue(withText.isTemplate)
+
+        let bare = StatusItemImage.make(symbol: "infinity", text: "")
+        XCTAssertGreaterThan(bare.size.width, 8)
     }
 
     func testTransitionsIgnoreWrongPhase() {

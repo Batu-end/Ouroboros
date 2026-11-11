@@ -12,11 +12,8 @@ public struct OuroborosApp: App {
         MenuBarExtra {
             PopoverView(engine: engine)
         } label: {
-            // The status bar flattens its label to one run, so the symbol is interpolated
-            // into the Text rather than placed in an HStack beside it.
-            Text("\(Image(systemName: engine.menuBarSymbol))\(engine.menuBarText.isEmpty ? "" : "  " + engine.menuBarText)")
-                .font(.system(size: 14, weight: .medium))
-                .monospacedDigit()
+            Image(nsImage: StatusItemImage.make(symbol: engine.menuBarSymbol,
+                                                text: engine.menuBarText))
         }
         .menuBarExtraStyle(.window)
     }
