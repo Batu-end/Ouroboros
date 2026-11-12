@@ -1,155 +1,135 @@
-<p align="center">
-  <img src="Resources/AppIcon-preview.png" width="160" alt="Ouroboros app icon">
-</p>
-
 # Ouroboros
 
-A macOS menu bar focus timer that earns your breaks instead of scheduling them.
+**A menu bar focus timer where quitting is the main button, and it pays you.**
 
-Pomodoro assumes you can start and stop on command. Ouroboros assumes you can't. You work as
-long as the focus holds; the moment it breaks you hit one button, and the app pays you back
-**15% of the time you actually worked** as break time. Work feeds break feeds work — a loop that
-closes on itself. No Dock icon, no windows, no streaks to lose.
+Work for as long as your focus holds. When it breaks, press one button. Ouroboros gives you back a percentage of the time you actually worked.
 
-## The loop
+No Dock icon, no windows, no account.
 
-| Phase | Menu bar | Primary button |
-| --- | --- | --- |
-| Idle | `infinity` | Start Working |
-| Working | `infinity.circle.fill` + `14:25` counting up | **I'm Distracted — Take Break** |
-| On break | `cup.and.saucer.fill` + `02:45` counting down | Resume Work Early |
-| Waiting | `hourglass` + how long it has waited | Start Next Block |
+![macOS 14+](https://img.shields.io/badge/macOS-14%2B-lightgrey)
+![Dependencies: none](https://img.shields.io/badge/dependencies-none-brightgreen)
 
-- `EarnedBreak = WorkedSeconds × ratio`, with a hard floor of **60 seconds** — a two-minute work
-  block still buys a real minute off, so there is never a reason to push through.
-- The ratio is yours, under the gear: **Low 12%**, **Standard 15%**, **High 25%** (7:12, 9:00 and
-  15:00 of break per hour worked). Focus is not the same every day.
-- Work is cool teal, break is warm amber — the whole popover shifts tint, so the mode registers
-  before you read a word.
-- Starting a break is silent — stopping work should feel like relief, not an event. When the
-  countdown hits zero you get a soft chime, a time-sensitive banner, and a panel that sits above
-  everything, including full-screen apps, and **stays until you answer it**. It never steals focus.
-- Work does not restart by itself. The app waits, counting nothing, until you click. If the break
-  ends while you are away from the desk, that time lands in no column — counting it as work would
-  inflate the one number here that is meant to be true.
-- Every 10 minutes of work the ring pulses once. Small, cheap, and it lands.
-- Today's loops are logged with totals and the break ratio you actually realized.
+| Working | On break |
+|:---:|:---:|
+| <img src="docs/images/working.png" alt="Working: a teal ring counting up from 6:11, with the button I'm Distracted — Take Break" width="300"> | <img src="docs/images/on-break.png" alt="On break: an amber ring counting down from 0:47, with the button Resume Work Early" width="300"> |
+| Counting up, open-ended | Counting down, one full circle |
 
-## Build and run
+## How it works
+
+```
+EarnedBreak = WorkedSeconds × ratio      (floor: 60 seconds)
+```
+
+Default ratio is 15%: one hour of work earns nine minutes of break. Pick Low (12%), Standard (15%) or High (25%) under the gear.
+
+The 60-second floor means a two-minute work block still buys a real minute off. There is never a reason to push through.
+
+**The loop**
+
+```
+Working ──[ I'm Distracted — Take Break ]──▶ On break ──(countdown ends)──▶ Waiting ──(you click)──▶ Working
+```
+
+| State    | Menu bar                          | Counting |
+|----------|-----------------------------------|----------|
+| Idle     | `infinity`                        | nothing  |
+| Working  | teal, time counting up            | work     |
+| On break | amber, time counting down         | break    |
+| Waiting  | violet, how long it has waited    | nothing  |
+
+## What's in the popover
+
+A ring with the live time, one large button, and two quiet ones: **Skip Break** ends a break early and keeps the time you did take; **End Session** leaves the loop entirely.
+
+Underneath is **today's log**. A *cycle* is one work block plus the break that followed it, recorded the moment that break closes — so "24 cycles" means you took 24 breaks. The log shows each one's work and break time, the day's totals, and the break ratio you actually realized, which is rarely the one you picked. It resets with the date and keeps 60 days of history.
+
+Two smaller things: the ring pulses once for every 10 minutes of work, and the readout steps down a size past an hour so `1:14:08` doesn't jitter.
+
+There is no Dock icon and no app menu, so **quit from the ⏻ button in the popover**, or press ⌘Q while it is open.
+
+## Why not Pomodoro
+
+| Pomodoro                              | Ouroboros                                         |
+|---------------------------------------|---------------------------------------------------|
+| Fixed 25 minutes of work              | Work as long as focus holds                       |
+| Breaks are scheduled                  | Breaks are earned, proportional to real work      |
+| Stopping early is failure             | Stopping early is the main button, and it pays    |
+| Progress bar toward a deadline        | No invented deadline                              |
+| Streaks, scores, gamification         | None                                              |
+
+Most timers make quitting feel like failing. Here it is the mechanism.
+
+## Who it's for
+
+Anyone whose work doesn't fit a 25 or 50 minute box. It was built for a specific failure mode, common with ADHD: you can't start on command, you can't stop on command, and a rigid 25/5 split punishes you for both.
+
+It is not a medical or clinical tool. It's a timer with different assumptions.
+
+## Design decisions
+
+- **The primary button is the exit.** The biggest control in the app is "I'm Distracted — Take Break."
+- **Work has no progress bar.** Work is open-ended, so a bar filling toward an invented target would be a lie. The ring sweeps once a minute for motion. The caption shows the honest number: how much break you've banked so far.
+- **Colour marks the boundary.** Teal for work, amber for rest, violet for waiting. The popover carries a wash of the phase colour, so the mode registers before you read anything.
+- **The app never invents time.** When a break ends, it waits, counting nothing, until you click. If the break ran out while you were away, that time lands in no column. The log stays true, at the cost of a gap.
+- **Crashes don't cost you an hour.** State is written on every transition, with a 15-second heartbeat. Relaunch within 90 seconds and the timer resumes exactly where it was. After a reboot, the block is closed at the last heartbeat.
+- **Starting a break is silent. Ending one is not.** A soft chime, a time-sensitive banner, and a panel that stays until answered.
+- **One setting.** Break generosity.
+
+## Install
+
+Beta: build from source. No signed binary yet.
 
 ```bash
+git clone https://github.com/Batu-end/Ouroboros.git
+cd Ouroboros
 ./build.sh --run
 ```
 
-That compiles in release mode, assembles `Ouroboros.app` next to the sources, ad-hoc signs it, and
-launches it. Look at the right side of your menu bar — there is deliberately no Dock icon and no
-window.
+Requires macOS 14+ and Xcode (or the command line tools). The script builds `Ouroboros.app` next to the sources and launches it — look at the right end of your menu bar.
 
-To keep it:
+**To keep it:**
 
 ```bash
 mv Ouroboros.app /Applications/
 ```
 
-Then add it under **System Settings → General → Login Items & Extensions → Open at Login** if you
-want it on every boot.
+Then add it under **System Settings → General → Login Items & Extensions → Open at Login** to have it there every morning.
 
-Tests:
+Note that `./build.sh` always writes the app beside the sources, so after a rebuild you need to copy it across again.
 
-```bash
-swift test
-```
+**To remove it:** quit, delete the app, and clear its stored history with `defaults delete com.batu.ouroboros`.
 
-Covers the 15% math, the 60-second floor, clock formatting, every phase transition, and a full
-work → break-expiry → work loop (driven at 600× speed).
+## Privacy
 
-### Fast mode
+Session history lives in `UserDefaults`, as a 60-day rolling window. Nothing leaves your machine. There is no network code in the app.
 
-```bash
-OUROBOROS_FAST=1 ./Ouroboros.app/Contents/MacOS/Ouroboros
-```
+## Under the hood
 
-One real second counts as a minute, so you can watch an entire loop — including the break-over
-chime — in a few seconds.
+- Pure SwiftUI, Combine and UserNotifications. Zero third-party dependencies.
+- 0.0% CPU idle, about 1.3% with a timer running and the popover closed.
+- Timers use absolute date anchors, not counters, so sleep/wake and dropped ticks can't cause drift. It resyncs on wake.
+- `MenuBarExtra` keeps popover content alive after closing, so an animated `TimelineView` inside it redraws at display rate forever. That cost 50% of a core until the animation was gated on actual window visibility.
+- 39 tests, including rendering the ring to pixels and asserting on them.
+- Agent app (`LSUIElement`): no Dock tile, no app switcher entry.
 
-## No Dock icon: the `LSUIElement` key
+### Working on it
 
-This is the one setting that turns a normal app into a menu bar app. `build.sh` writes it from
-[`Resources/Info.plist`](Resources/Info.plist):
+`swift test` runs the suite. `OUROBOROS_FAST=1 ./Ouroboros.app/Contents/MacOS/Ouroboros` makes one real second count as a minute, so a whole work → break → waiting loop takes seconds to exercise.
 
-```xml
-<key>LSUIElement</key>
-<true/>
-```
+The icon is generated from line art rather than drawn by hand — `swift Tools/MakeIcon.swift path/to/art.jpg` keys out a flat background, recolours the ink and emits every size via `iconutil`.
 
-**If you build this in Xcode instead** (File → New → Project → macOS → App, SwiftUI lifecycle,
-then drop `Sources/` in):
+If you rebuild this in an Xcode project instead of the package, the one setting that makes it a menu bar app is **Application is agent (UIElement)** — the `LSUIElement` key — set to YES in the target's Info.plist. Without it you get a Dock icon and an app menu.
 
-1. Select the project in the navigator, pick the app **target**, open the **Info** tab.
-2. Hover any row, click **+**, and start typing `Application is agent` — Xcode autocompletes to
-   the key `LSUIElement`.
-3. Set its value to **YES**.
+## Beta status
 
-Equivalent route if your target has no Info tab: **Build Settings → Info.plist Values →
-"Application is agent (UIElement)" → Yes**, or add `INFOPLIST_KEY_LSUIElement = YES` to the target's
-build settings.
+- Tested only on the author's machine (Apple silicon, macOS 26).
+- Not signed or notarized. No installer, no Homebrew cask yet. Gatekeeper will warn you about a prebuilt copy.
+- Not included: sync, an iOS app, export, reports beyond today, custom ratio values, idle detection, app or website blocking.
 
-Verify it took effect — with the app running:
+Bugs and feedback: [open an issue](https://github.com/Batu-end/Ouroboros/issues). Reports from other macOS versions and Intel Macs are the most useful thing right now.
 
-```bash
-lsappinfo info -only ApplicationType "$(pgrep -x Ouroboros)"
-```
+## License
 
-`"ApplicationType"="UIElement"` means it is a true agent: menu bar only, no Dock tile, no app menu
-(quit from the ⏻ button inside the popover, or ⌘Q while it's open).
+MIT — see [LICENSE](LICENSE). Do what you like with the code.
 
-## Architecture
-
-```
-Sources/OuroborosKit/
-  Core/BreakMath.swift          pure rules: 15% ratio, 60s floor, formatting  (unit tested)
-  Core/AppPhase.swift           idle / working(since:) / onBreak(start:duration:worked:)
-  Core/TimerEngine.swift        the only mutable state: phase machine + 5Hz tick + log
-  Core/SessionStore.swift       Codable sessions in UserDefaults, 60-day window
-  Core/NotificationManager.swift best-effort banner, always-on chime
-  UI/…                          popover dashboard, ring, buttons, log
-Sources/Ouroboros/main.swift    entry point
-```
-
-Four deliberate choices:
-
-- **Absolute time anchors, never counters.** Each phase stores a `Date`; elapsed and remaining are
-  recomputed from the clock on every tick. Sleep the lid, drop a timer tick, change nothing — the
-  numbers stay honest.
-- **The working ring sweeps once a minute** rather than filling toward a target. Work here is
-  open-ended; a progress bar toward an invented deadline would be a lie. The caption shows what
-  matters instead: how much break you have banked so far.
-- **A crash never costs you an hour.** The live phase is written to `UserDefaults` on every
-  transition, with a heartbeat every 15 seconds. Relaunch within 90 seconds and the timer picks up
-  exactly where it was; come back after a reboot and the block is closed *at the last heartbeat* —
-  the dead time is never counted as work, and never silently discarded either.
-- **Idle is 0.0% CPU.** The ticker only exists while a phase is live, the status item is cached
-  between seconds, and the ring's `TimelineView` is paused whenever its window is off screen —
-  `MenuBarExtra` keeps its content alive after the popover closes, so an ungated animation quietly
-  burns half a core. Measured: **0.0% idle, ~1.3% with a timer running and the popover closed**.
-
-Pure SwiftUI + Combine + UserNotifications. No dependencies. macOS 14+.
-
-## Icon
-
-`Resources/AppIcon.icns` is generated, not hand-drawn:
-
-```bash
-swift Tools/MakeIcon.swift path/to/line-art.jpg
-```
-
-[`Tools/MakeIcon.swift`](Tools/MakeIcon.swift) keys the flat background out of a piece of dark
-linework by luminance, crops to the ink, recolors it, and composites it onto a dark rounded-square
-plate with a teal halo — then emits every size from 16px to 1024px via `iconutil`. Point it at any
-other line drawing to reskin the app.
-
-Since the app is an agent (`LSUIElement`), this icon never appears in the Dock; it shows up in
-Finder, Spotlight and notification banners.
-
-> **Attribution:** the ouroboros engraving this icon is derived from came from a blog post and its
-> rights holder is unverified. Swap in your own artwork before using this anywhere public.
+One exception: the app icon is derived from an engraving whose rights holder is unverified, so it is not covered. Swap in your own art before redistributing a build.

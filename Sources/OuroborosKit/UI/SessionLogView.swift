@@ -1,8 +1,17 @@
 import SwiftUI
 
-/// Today's loops: what you actually worked, and what you actually rested.
+/// Today's cycles — one work block plus the break that followed it, recorded when the
+/// break closes. What you actually worked, and what you actually rested.
 struct SessionLogView: View {
     let sessions: [Session]
+
+    private static let rowHeight: CGFloat = 29
+    private static let maxListHeight: CGFloat = 132
+
+    /// Tall enough for the rows there are, never taller than the popover can spare.
+    static func listHeight(for count: Int) -> CGFloat {
+        min(CGFloat(max(count, 1)) * rowHeight, maxListHeight)
+    }
 
     private static let timeFormat: Date.FormatStyle =
         .dateTime.hour(.defaultDigits(amPM: .abbreviated)).minute()
@@ -16,14 +25,14 @@ struct SessionLogView: View {
                     .tracking(0.8)
                 Spacer()
                 if !sessions.isEmpty {
-                    Text("\(sessions.count) loop\(sessions.count == 1 ? "" : "s")")
+                    Text("\(sessions.count) cycle\(sessions.count == 1 ? "" : "s")")
                         .font(.system(size: 10))
                         .foregroundStyle(.tertiary)
                 }
             }
 
             if sessions.isEmpty {
-                Text("No loops closed yet.")
+                Text("No cycles closed yet.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -41,7 +50,10 @@ struct SessionLogView: View {
                         }
                     }
                 }
-                .frame(maxHeight: 132)
+                // A definite height, not `maxHeight`: a ScrollView has no ideal height of
+                // its own, so inside a popover that sizes itself to fit, a cap alone let it
+                // collapse to nothing — the day's cycles were counted but never listed.
+                .frame(height: Self.listHeight(for: sessions.count))
                 .card()
 
                 totals
