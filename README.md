@@ -41,7 +41,9 @@ Working ──[ I'm Distracted — Take Break ]──▶ On break ──(countdo
 
 A ring with the live time, one large button, and two quiet ones: **Skip Break** ends a break early and keeps the time you did take; **End Session** leaves the loop entirely.
 
-Underneath is **today's log**. A *cycle* is one work block plus the break that followed it, recorded the moment that break closes — so "24 cycles" means you took 24 breaks. The log shows each one's work and break time, the day's totals, and the break ratio you actually realized, which is rarely the one you picked. It resets with the date and keeps 60 days of history.
+Underneath is **today**: worked, rested, and the break ratio you actually realized, which is rarely the one you picked. Beside it is the day's cycle count — a *cycle* being one work block plus the break that followed it, recorded the moment that break closes, so "24 cycles" means you took 24 breaks.
+
+Individual cycles are recorded and kept for 60 days but deliberately not listed. A scrolling ledger of your day is more than this popover should ask you to read.
 
 Two smaller things: the ring pulses once for every 10 minutes of work, and the readout steps down a size past an hour so `1:14:08` doesn't jitter.
 

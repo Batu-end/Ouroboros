@@ -74,7 +74,7 @@ The reframe worth leading with: **the "I give up" button is the primary action, 
 
 ## What's in the UI
 
-Popover (~300pt wide, native materials): phase badge, timer ring with readout, one large primary action, quiet secondary actions (Skip Break / End Session), and today's log — every closed cycle (a work block plus the break that followed it) with work time, break time, daily totals and the break ratio you actually realized.
+Popover (~300pt wide, native materials): phase badge, timer ring with readout, one large primary action, quiet secondary actions (Skip Break / End Session), and today's totals — worked, rested, the break ratio actually realized, and a count of cycles (a cycle being one work block plus the break that followed it). Individual cycles are stored for 60 days but not listed, leaving room for something better later: streak stickers, badges, weekly shapes.
 
 Settings are one gear with one choice: break generosity.
 

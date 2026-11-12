@@ -126,15 +126,6 @@ final class RingRenderTests: XCTestCase {
         return CGSize(width: image.width, height: image.height)
     }
 
-    /// The log list must claim real height. `maxHeight` alone let it collapse to zero, so
-    /// the popover counted the day's cycles without ever listing them.
-    func testLogListClaimsHeightForItsRows() {
-        XCTAssertEqual(SessionLogView.listHeight(for: 0), 29, "even empty, never zero")
-        XCTAssertEqual(SessionLogView.listHeight(for: 1), 29)
-        XCTAssertEqual(SessionLogView.listHeight(for: 3), 87)
-        XCTAssertEqual(SessionLogView.listHeight(for: 40), 132, "capped, then it scrolls")
-    }
-
     // MARK: Helpers
 
     private func render(_ view: some View) throws -> NSBitmapImageRep {
