@@ -3,3 +3,4 @@
 *.app
 *.xcuserstate
 .DS_Store
+dist/

@@ -86,7 +86,19 @@ It is not a medical or clinical tool. It's a timer with different assumptions.
 
 ## Install
 
-Beta: build from source. No signed binary yet.
+### Download
+
+Grab `Ouroboros-0.1.0.zip` from the [latest release](https://github.com/Batu-end/Ouroboros/releases/latest), unzip it, and drag **Ouroboros.app** into Applications. It is a universal build for macOS 14 or later. The Intel half has been compiled but not run on real hardware, so treat Intel as untested.
+
+**The first launch will be blocked.** The app is not notarized yet, so macOS says it can't verify it. To open it anyway:
+
+1. Try to open Ouroboros once. When macOS refuses, click **Done**.
+2. Open **System Settings → Privacy & Security** and scroll to the Security section.
+3. Click **Open Anyway** next to "Ouroboros was blocked", then confirm.
+
+You only do this once. If you would rather not run a binary that isn't notarized, build it yourself, below.
+
+### Build from source
 
 ```bash
 git clone https://github.com/Batu-end/Ouroboros.git
@@ -131,8 +143,8 @@ If you rebuild this in an Xcode project instead of the package, the one setting 
 
 ## Beta status
 
-- Tested only on the author's machine (Apple silicon, macOS 26).
-- Not signed or notarized. No installer, no Homebrew cask yet. Gatekeeper will warn you about a prebuilt copy.
+- Tested only on the author's machine (Apple silicon, macOS 26). The Intel build has never been run.
+- Ad-hoc signed, not notarized, so Gatekeeper blocks the first launch of a download (see Install). No installer, no Homebrew cask yet.
 - Not included: sync, an iOS app, export, reports beyond today, custom ratio values, idle detection, app or website blocking.
 
 Bugs and feedback: [open an issue](https://github.com/Batu-end/Ouroboros/issues). Reports from other macOS versions and Intel Macs are the most useful thing right now.
