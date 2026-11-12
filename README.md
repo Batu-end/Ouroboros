@@ -1,3 +1,8 @@
+<p align="center">
+  <img src="Resources/AppIcon-preview.png" width="160" alt="Ouroboros app icon">
+</p>
+
+
 # Ouroboros
 
 **A menu bar focus timer where quitting is the main button, and it pays you.**
@@ -7,7 +12,9 @@ Work for as long as your focus holds. When it breaks, press one button. Ouroboro
 No Dock icon, no windows, no account.
 
 ![macOS 14+](https://img.shields.io/badge/macOS-14%2B-lightgrey)
+![Swift 6](https://img.shields.io/badge/Swift-6-orange)
 ![Dependencies: none](https://img.shields.io/badge/dependencies-none-brightgreen)
+![Status: beta](https://img.shields.io/badge/status-beta-yellow)
 
 | Working | On break |
 |:---:|:---:|
