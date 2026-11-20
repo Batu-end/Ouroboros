@@ -3,7 +3,7 @@
 </p>
 
 
-# Ouroboros
+# Ouroboros – [Visit the Page](https://batu-end.github.io/Ouroboros/)
 
 **A menu bar focus timer where quitting is the main button, and it pays you.**
 
