@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ouroboros — a menu bar timer that pays you for stopping</title>
+  <meta name="description" content="A free macOS menu bar focus timer with no fixed blocks. Work as long as your focus holds; one button turns a share of that time into an earned break.">
+  <meta name="theme-color" content="#0d0d0f">
+  <meta name="color-scheme" content="dark">
+
+  <!-- Open Graph. og:url / og:image must be absolute; they assume the site lives at batu-end.github.io/Ouroboros/ -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Ouroboros">
+  <meta property="og:title" content="Ouroboros — a menu bar timer that pays you for stopping">
+  <meta property="og:description" content="Work as long as your focus holds. When it breaks, press one button and get a share of that time back as a break.">
+  <meta property="og:url" content="https://batu-end.github.io/Ouroboros/">
+  <meta property="og:image" content="https://batu-end.github.io/Ouroboros/assets/screenshot-working.png">
+  <meta property="og:image:alt" content="The Ouroboros popover: a ring reading 6:11 and a button that says I'm Distracted — Take Break">
+  <meta name="twitter:card" content="summary">
+
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Geist:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script>document.documentElement.classList.add('js');</script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <div class="grain" aria-hidden="true"></div>
+
+  <!-- Shared logo mark: a ring that almost closes on itself -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="mark" viewBox="0 0 64 64">
+      <circle cx="32" cy="32" r="18" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-dasharray="97 16.1" transform="rotate(-70 32 32)"/>
+      <circle cx="22.9" cy="16.4" r="5.2" fill="currentColor"/>
+    </symbol>
+  </svg>
+
+  <header class="nav">
+    <div class="wrap nav-inner">
+      <a class="brand" href="./">
+        <svg class="brand-mark" width="22" height="22" aria-hidden="true"><use href="#mark"/></svg>
+        <span>ouroboros</span>
+      </a>
+      <nav aria-label="Primary">
+        <a class="nav-link hide-sm" href="#features">Features</a>
+        <a class="nav-link hide-sm" href="#how">How it works</a>
+        <a class="nav-link" href="https://github.com/Batu-end/Ouroboros">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <!-- 1. HERO -->
+    <section class="hero">
+      <div class="glow" aria-hidden="true"></div>
+
+      <div class="wrap hero-inner">
+        <p class="label reveal">macOS · menu bar · open source</p>
+        <h1 class="reveal">Ouroboros</h1>
+        <!-- EDIT: tagline -->
+        <p class="tagline reveal">Stop when your focus breaks.<br>Get the time back.</p>
+        <!-- EDIT: subline -->
+        <p class="subline reveal">No 25-minute blocks. Work for as long as it lasts, then press one button. Ouroboros turns 15% of the time you actually worked into a break.</p>
+
+        <div class="cta reveal">
+          <a class="btn btn-primary" href="https://github.com/Batu-end/Ouroboros/releases/latest">
+            <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v8m0 0L4.5 6.5M8 10l3.5-3.5M3 13.5h10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Download for macOS
+          </a>
+          <a class="btn btn-ghost" href="https://github.com/Batu-end/Ouroboros">
+            <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+            View on GitHub
+          </a>
+        </div>
+        <p class="fineprint reveal">macOS 14+ · <span data-version>v0.1.0</span> · no account, no network</p>
+      </div>
+
+      <!-- Menu bar mock -->
+      <div class="wrap">
+        <figure class="shot reveal">
+          <!--
+            SCREENSHOT SLOT
+            To use a real screenshot instead of the HTML mock, replace the whole
+            <div class="mock">…</div> below with:
+              <img class="shot-img" src="assets/screenshot-working.png" width="503" height="640"
+                   alt="The Ouroboros popover: a ring reading 6:11 and a button that says I'm Distracted — Take Break">
+            (A real one is already in assets/. Then delete the figcaption.)
+          -->
+          <div class="mock" role="img" aria-label="Illustration: the Ouroboros timer in the macOS menu bar, counting up with its popover open">
+            <div class="menubar">
+              <span class="mb-left"><span class="mb-app">Finder</span><span class="hide-sm">File</span><span class="hide-sm">Edit</span><span class="hide-sm">View</span><span class="hide-md">Window</span></span>
+              <span class="mb-right">
+                <span class="mb-timer">
+                  <svg width="14" height="14"><use href="#mark"/></svg>
+                  <span data-work>42:18</span>
+                  <!-- Popover -->
+                  <span class="pop">
+                    <span class="pop-head">
+                      <span class="pop-brand">OUROBOROS</span>
+                      <span class="pop-badge">WORKING</span>
+                    </span>
+                    <span class="pop-ring">
+                      <svg viewBox="0 0 120 120">
+                        <circle class="ring-track" cx="60" cy="60" r="52"/>
+                        <circle class="ring-prog" cx="60" cy="60" r="52" data-ring/>
+                      </svg>
+                      <span class="ring-read">
+                        <span class="ring-time" data-work>42:18</span>
+                        <span class="ring-cap">banked <span data-banked>6:20</span> break</span>
+                      </span>
+                    </span>
+                    <span class="pop-btn">I'm Distracted — Take Break</span>
+                    <span class="pop-quiet">End Session</span>
+                    <span class="pop-today">
+                      <span><b class="c-work">1h 18m</b>Worked</span>
+                      <span><b class="c-rest">14m</b>Rested</span>
+                      <span><b>19%</b>Ratio</span>
+                    </span>
+                  </span>
+                </span>
+                <svg class="hide-sm" width="15" height="12" viewBox="0 0 15 12"><path d="M1 4.2a9.5 9.5 0 0 1 13 0M3.2 6.6a6.4 6.4 0 0 1 8.6 0M5.4 9a3.2 3.2 0 0 1 4.2 0" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+                <span class="mb-batt hide-sm"><span></span></span>
+                <span class="mb-clock">Wed 9:41</span>
+              </span>
+            </div>
+          </div>
+          <figcaption>Mockup of the popover. Real screenshots are in the <a href="https://github.com/Batu-end/Ouroboros#readme">README</a>.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- 2. FEATURES -->
+    <section class="section" id="features">
+      <div class="wrap">
+        <p class="label reveal">What it does</p>
+        <h2 class="reveal">Small on purpose.</h2>
+        <!-- EDIT: feature copy -->
+        <div class="grid">
+          <article class="card reveal">
+            <span class="card-num">01</span>
+            <h3>Breaks are earned</h3>
+            <p>An hour of work buys nine minutes off. Even two minutes buys one. There is never a reason to push through.</p>
+          </article>
+          <article class="card reveal">
+            <span class="card-num">02</span>
+            <h3>Quitting is the main button</h3>
+            <p>The biggest control says “I'm Distracted — Take Break.” Stopping early isn't failing. It's how the loop works.</p>
+          </article>
+          <article class="card reveal">
+            <span class="card-num">03</span>
+            <h3>Lives in the menu bar</h3>
+            <p>No Dock icon, no window to lose. Colour tells you the phase: work, rest, or waiting for you to come back.</p>
+          </article>
+          <article class="card reveal">
+            <span class="card-num">04</span>
+            <h3>Quiet and private</h3>
+            <p>0% CPU at idle, no dependencies, no network code. Your history stays on your Mac for 60 days, then it's gone.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. HOW IT WORKS -->
+    <section class="section" id="how">
+      <div class="wrap">
+        <p class="label reveal">How it works</p>
+        <h2 class="reveal">One loop.</h2>
+        <ol class="steps">
+          <li class="reveal"><span class="num">01</span><h3>Start working</h3><p>Click the icon. The timer counts up, with no target to hit.</p></li>
+          <li class="reveal"><span class="num">02</span><h3>Stop when it breaks</h3><p>Press the button. 15% of what you worked becomes your break.</p></li>
+          <li class="reveal"><span class="num">03</span><h3>Come back</h3><p>A soft chime when it's over. It waits, counting nothing, until you click.</p></li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- 4. BETA -->
+    <section class="section section-tight" id="beta">
+      <div class="wrap">
+        <aside class="beta reveal">
+          <span class="badge">Beta</span>
+          <p><strong>This is an early release.</strong> It's tested on one machine (Apple silicon, macOS 26), and the Intel build has never been run. Expect rough edges.</p>
+          <!-- Remove this paragraph once the app is notarized -->
+          <p class="muted">It isn't notarized yet, so macOS blocks the first launch. Open <span class="kbd">System Settings → Privacy &amp; Security</span> and click <span class="kbd">Open Anyway</span>. You only do this once.</p>
+          <p class="muted">Bug reports help most right now, especially from other macOS versions and Intel Macs.</p>
+          <div class="beta-actions">
+            <a class="link" href="https://github.com/Batu-end/Ouroboros/issues">Open an issue on GitHub →</a>
+            <a class="link link-quiet" href="https://github.com/Batu-end/Ouroboros/releases/latest">Download <span data-version>v0.1.0</span></a>
+          </div>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <!-- 5. FOOTER -->
+  <footer class="footer">
+    <div class="wrap footer-inner">
+      <span class="footer-brand">
+        <svg width="16" height="16" aria-hidden="true"><use href="#mark"/></svg>
+        Ouroboros <span class="muted" data-version>v0.1.0</span>
+      </span>
+      <a class="link" href="https://github.com/Batu-end/Ouroboros">GitHub</a>
+      <span class="muted">MIT licensed · Made by Batu</span>
+    </div>
+  </footer>
+
+  <script src="script.js" defer></script>
+</body>
+</html>
